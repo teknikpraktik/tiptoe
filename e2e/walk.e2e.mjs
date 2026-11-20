@@ -25,6 +25,8 @@ try {
   await page.goto(base + "/");
   await page.waitForFunction(() => !!window.__tiptoe, null, { timeout: 10000 });
   await page.getByTestId("home-start").click();
+  // Webbläsarläge (inte installerad): varningen visas, spela ändå.
+  await page.getByTestId("play-anyway").click({ timeout: 5000 });
   await page.waitForURL("**/walk/");
   await page.waitForSelector('[data-testid="map"][data-loaded="true"]', { timeout: 20000 });
   check("promenaden startar och kartan visas", (await view()).stage === "walking");
@@ -76,11 +78,10 @@ try {
       window.dispatchEvent(new DeviceOrientationEvent("deviceorientationabsolute", { alpha: a, beta: 90, gamma: 0, absolute: true }));
       window.dispatchEvent(new DeviceOrientationEvent("deviceorientation", { alpha: a, beta: 90, gamma: 0, absolute: false }));
     }, bearing);
-    const feeding = (async () => { for (let i = 0; i < 60; i++) { await aim(); await fix(p, 100); await page.waitForTimeout(50); } })();
-    await page.getByTestId("camera-btn").click();
+    await page.getByTestId("camera-btn").click({ timeout: 10000 });
     await page.getByTestId("camera").waitFor({ timeout: 5000 });
     await page.waitForFunction(() => document.querySelector("video")?.videoWidth > 0, null, { timeout: 10000 });
-    await feeding;
+    for (let i = 0; i < 60; i++) { await aim(); await fix(p, 100); await page.waitForTimeout(50); }
     check("kameravyn öppnas på samma sida", page.url().endsWith("/walk/"));
     await page.screenshot({ path: `${OUT}/03-camera.png` });
     await page.getByTestId("shutter").click();
@@ -109,6 +110,14 @@ try {
   await page.goto(base + "/");
   const stats = await page.getByTestId("stats").innerText({ timeout: 5000 });
   check("startsidan visar poäng och areal", /poäng/.test(stats) && /ha reservat/.test(stats), stats);
+  // Fälttestsidan: diagnostik och promenadens logg.
+  await page.goto(base + "/field/");
+  await page.getByTestId("log").first().waitFor({ timeout: 5000 });
+  const logLine = await page.getByTestId("log").first().innerText();
+  check("fältloggen finns med möten, foto och reservat", /[1-9]\d* möten/.test(logLine) && /[1-9]\d* foton/.test(logLine) && /[1-9]\d* reservat/.test(logLine), logLine.split("\n")[0]);
+  const envText = await page.getByTestId("field-env").innerText();
+  check("diagnostiken visar lagring, beständighet och wake lock", /Lagring/.test(envText) && /Beständig lagring/.test(envText) && /Skärmlås/.test(envText));
+  await page.screenshot({ path: `${OUT}/05-field.png`, fullPage: true });
   void ctx;
 } catch (e) {
   check("oväntat fel", false, String(e));

@@ -9,7 +9,9 @@ import { cachedFetcher } from "@/play/tile-cache";
 import { WalkSession, type WalkView } from "@/play/session";
 import { Repo } from "@/storage/repo";
 import type { Db } from "@/storage/idb";
+import { BUILD_ID } from "./build";
 import { appDb } from "./db";
+import { isStandalone } from "./install";
 import { useLang } from "./i18n";
 import { createMotionSource } from "./motionSource";
 import { walkStatus } from "./walkStatus";
@@ -19,9 +21,6 @@ const C = createContext<Ctx | null>(null);
 
 const DEBUG_KEY = "tiptoe.debug";
 export const debugEnabled = () => { try { return localStorage.getItem(DEBUG_KEY) === "on"; } catch { return false; } };
-
-/** Fältloggen i minnet (steg 6 sparar och exporterar den). */
-export const memoryLog: { t: number; event: string; data?: Record<string, unknown> }[] = [];
 
 /** En promenadsession för hela appen, så att GPS och promenad överlever sidbyten. */
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -40,7 +39,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         loadEnv: (c, r) => loadEnvironment(c, r, tile),
         motion: createMotionSource(),
         wakeLock: "wakeLock" in navigator ? { request: () => (navigator as Navigator & { wakeLock: { request(t: "screen"): Promise<{ release(): Promise<void> }> } }).wakeLock.request("screen") } : undefined,
-        onLog: (event, data) => { memoryLog.push({ t: Date.now(), event, data }); if (memoryLog.length > 2000) memoryLog.shift(); },
+        build: BUILD_ID,
+        userAgent: navigator.userAgent,
+        standalone: isStandalone(),
+        persist: () => navigator.storage?.persist?.() ?? Promise.resolve(false),
       });
       await session.init(lang);
       if (cancelled) return;

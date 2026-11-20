@@ -8,8 +8,11 @@ try {
   await page.getByTestId("home-start").waitFor({ timeout: 10000 });
   await page.waitForFunction(() => !document.querySelector('[data-testid="home-start"]')?.hasAttribute("disabled"), null, { timeout: 10000 });
   check("startsidan visar Starta promenad", (await page.getByTestId("home-start").innerText()).includes("Starta promenad"));
+  check("uppmaning att installera före första promenaden", await page.getByTestId("install").isVisible());
   await page.screenshot({ path: `${OUT}/01-start.png` });
   await page.getByTestId("home-start").click();
+  // Webbläsarläge (inte installerad): varningen visas, spela ändå.
+  await page.getByTestId("play-anyway").click({ timeout: 5000 });
   await page.waitForURL("**/walk/");
   await page.waitForSelector('[data-testid="map"][data-loaded="true"]', { timeout: 20000 });
   check("kartan laddas", true);
