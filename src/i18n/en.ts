@@ -204,6 +204,9 @@ export const en: Record<MessageKey, string> = {
   "walk.freeze": "FREEZE!",
   "walk.freezeWarn": "It's lifting its head …",
 
+  "walk.soundOn": "Sound on",
+  "walk.soundOff": "Sound off",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 };

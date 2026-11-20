@@ -11,6 +11,7 @@ import { Repo } from "@/storage/repo";
 import type { Db } from "@/storage/idb";
 import { BUILD_ID } from "./build";
 import { appDb } from "./db";
+import { audio } from "./audio";
 import { isStandalone } from "./install";
 import { useLang } from "./i18n";
 import { createMotionSource } from "./motionSource";
@@ -43,6 +44,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         userAgent: navigator.userAgent,
         standalone: isStandalone(),
         persist: () => navigator.storage?.persist?.() ?? Promise.resolve(false),
+        onSound: (c) => { audio.play(c); },
+        onAmbience: (a) => audio.setAmbience(a),
       });
       await session.init(lang);
       if (cancelled) return;
@@ -51,7 +54,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (debugEnabled()) (window as unknown as { __tiptoe?: WalkSession }).__tiptoe = session;
       setCtx({ session, db });
     })();
-    const vis = () => session?.onVisibility(document.hidden);
+    const vis = () => { audio.setHidden(document.hidden); session?.onVisibility(document.hidden); };
     const hide = () => session?.onPageHide();
     document.addEventListener("visibilitychange", vis);
     window.addEventListener("pagehide", hide);

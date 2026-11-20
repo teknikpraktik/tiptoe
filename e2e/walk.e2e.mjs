@@ -91,6 +91,9 @@ try {
     await page.screenshot({ path: `${OUT}/04-result.png` });
     await page.getByTestId("result-ok").click();
   }
+  const sounds = await page.evaluate(() => (window.__tiptoe.currentLog()?.data.entries ?? []).filter((e) => e.k === "sound").map((e) => e.d.kind));
+  check("ljudregin ger ljud (närhet, belöning)", sounds.length > 0 && sounds.includes("chime"), sounds.slice(0, 8).join(","));
+  check("ljud av/på finns i statusraden", await page.getByTestId("sound").isVisible());
   const before = await view();
 
   // Omstart: ladda om sidan. Promenaden är pausad, reservat och poäng finns kvar.

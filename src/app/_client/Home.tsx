@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ALL_SPECIES } from "@/engine/species";
+import { audio } from "./audio";
 import { useT } from "./i18n";
 import { installPrompt, isIos, isStandalone } from "./install";
 import { Modal } from "./Modal";
@@ -23,6 +24,7 @@ export function Home() {
 
   const go = async () => {
     setWarn(false);
+    audio.unlock();
     // Promenaden startas i klicket (iOS: rörelsesensorn kräver en användargest), sedan kartan.
     if (ctx && v?.stage === "idle") await ctx.session.start();
     router.push("/walk");
