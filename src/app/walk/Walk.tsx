@@ -66,7 +66,7 @@ export function Walk() {
   }, [camera, ctx, manifest]);
   useEffect(() => { if (camera && (v?.tempo === "walk" || v?.tempo === "run")) setCamera(null); }, [camera, v?.tempo]);
 
-  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, label: t("walk.animalNear", { species: t(`species.${a.species}`), m: Math.round(a.distM) }) })), [v?.animals, t]);
+  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, look: a.look, label: t("walk.animalNear", { species: t(`species.${a.species}`), m: Math.round(a.distM) }) })), [v?.animals, t]);
   const reserves = useMemo(() => (v?.reserves ?? []).map((r) => r.rings), [v?.reserves]);
   const reserveLevels = useMemo(() => (v?.reserves ?? []).map((r) => levelForArea(r.areaM2)), [v?.reserves]);
   const sightings = useMemo(() => (v?.sightings ?? []).map((x) => ({ id: x.id, lat: x.lat, lon: x.lon, label: t(`species.${x.species}`) })), [v?.sightings, t]);
@@ -105,7 +105,7 @@ export function Walk() {
 
   return (
     <main className="mapshell">
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} />
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} />
       <div className="statusbar" data-testid="status">
         <CloseButton href="/" />
         <span className={`gps q-${v.quality}`}>{t(`gps.quality.${v.quality}`)}{v.accuracyM != null && v.quality !== "unavailable" ? ` ${t("gps.accuracy", { m: Math.round(v.accuracyM) })}` : ""}</span>
@@ -118,6 +118,7 @@ export function Walk() {
       {v.stage === "walking" && v.env === "missing" && <div className="toast" role="alert">{t("walk.envMissing")}</div>}
       {v.storage === "none" && <div className="toast" role="alert">{t("walk.noStorage")}</div>}
       {toast && <div className="toast good" role="status" data-testid="reserve-toast">{toast}</div>}
+      {v.stage === "walking" && v.freeze && <div className={`freeze ${v.freeze}`} role="alert" data-testid="freeze">{v.freeze === "look" ? t("walk.freeze") : t("walk.freezeWarn")}</div>}
       {v.stage === "walking" && v.levelInfo && (
         <div className="levelbar" data-testid="level">
           <b>{t("walk.level", { level: v.levelInfo.level, ha: fmtHa(v.levelInfo.areaM2) })}</b>

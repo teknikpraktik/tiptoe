@@ -9,7 +9,7 @@ export const TEMPO = {
   sneakBelowHz: 1.45,
   runAboveHz: 2.5,
   /** Inga steg på så här länge = stilla. */
-  stillAfterMs: 1500,
+  stillAfterMs: 1200,
   /** Fönster för kadensen. */
   windowMs: 4000,
   /** Toppar: minsta höjd över medelnivån (m/s²) och minsta tid mellan steg. */
