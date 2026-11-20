@@ -5,11 +5,15 @@ import { safeSpot, type Environment, type Habitat } from "@/geo/environment";
 import { rand } from "./core/rng";
 import { BEHAVIOR, SPAWN } from "./config";
 import { hash32 } from "./hash";
-import { SPECIES, TEMPO_FACTOR, type SpeciesId, type Tempo } from "./species";
+import { SPECIES, TEMPO_FACTOR, WATER_ZONE, type SpeciesId, type Tempo } from "./species";
 import { candidates, cellsAround, idlePose, windowOf, type Candidate, type Cell } from "./world";
 
+/** Hur länge (ms) en fågel syns lyfta innan den är borta. */
+const FLY_MS = 1500;
+
 export type AnimalState = "rest" | "graze" | "wander" | "alert" | "flee" | "gone";
-export type GoneReason = "fled" | "left" | "far";
+/** fled = sprang iväg, dove = dök undan i vattnet, flew = lyfte, left = gick sin väg, far = för långt bort. */
+export type GoneReason = "fled" | "dove" | "flew" | "left" | "far";
 
 export interface Animal {
   id: string;
@@ -18,6 +22,7 @@ export interface Animal {
   cell: Cell;
   window: number;
   n: number;
+  variant?: string;
   home: LatLon;
   pos: LatLon;
   headingDeg: number;
@@ -27,7 +32,7 @@ export interface Animal {
   /** Störd: följer inte längre den delade tomgångsbanan. */
   disturbed: boolean;
   appearedAtMs: number;
-  flee?: { target: LatLon; leftM: number };
+  flee?: { target: LatLon; leftM: number; kind: "run" | "dive" | "fly"; untilMs?: number };
   goneAtMs?: number;
   goneReason?: GoneReason;
 }
@@ -155,7 +160,7 @@ export class WorldEngine {
     this.s.budget -= 1;
     this.s.used[c.id] = c.window;
     this.s.encounters++;
-    this.s.active.push({ id: c.id, species: c.species, seed: c.seed, cell: c.cell, window: c.window, n: c.n, home: c.home, pos: pose.pos, headingDeg: pose.headingDeg, state: pose.state, alarm: 0, disturbed: false, appearedAtMs: tMs });
+    this.s.active.push({ id: c.id, species: c.species, seed: c.seed, cell: c.cell, window: c.window, n: c.n, ...(c.variant ? { variant: c.variant } : {}), home: c.home, pos: pose.pos, headingDeg: pose.headingDeg, state: pose.state, alarm: 0, disturbed: false, appearedAtMs: tMs });
     ev.push({ type: "appear", id: c.id, species: c.species, distM: Math.round(d), habitat: this.env.habitat(player), tMs });
   }
 
@@ -189,7 +194,7 @@ export class WorldEngine {
       if (a.state === "alert") { a.state = "graze"; ev.push({ type: "calm", id: a.id, tMs: t }); }
       // Ostört djur följer den delade tomgångsbanan; ett stört stannar där det är och betar.
       if (!a.disturbed) {
-        const p = idlePose({ id: a.id, species: a.species, home: a.home, seed: a.seed, cell: a.cell, window: a.window, n: a.n }, t, this.env);
+        const p = idlePose({ id: a.id, species: a.species, home: a.home, seed: a.seed, cell: a.cell, window: a.window, n: a.n, variant: a.variant }, t, this.env);
         a.pos = p.pos; a.state = p.state; a.headingDeg = p.headingDeg;
         if ((t - a.appearedAtMs) / 1000 > sp.lifetimeS && d > sp.photoM * 1.5) this.gone(a, t, "left", ev);
       } else a.state = "graze";
@@ -197,7 +202,30 @@ export class WorldEngine {
   }
 
   private startFlee(a: Animal, player: LatLon, t: number, tempo: Tempo, d: number, ev: EngineEvent[]): void {
+    const sp = SPECIES[a.species];
+    a.state = "flee";
+    a.disturbed = true;
+    ev.push({ type: "flee", id: a.id, distM: Math.round(d), tempo, tMs: t });
+    if (sp.escape === "fly") {
+      // Lyftet är en animation i gränssnittet, ingen rörelse över vatten eller land.
+      a.flee = { target: a.pos, leftM: 0, kind: "fly", untilMs: t + FLY_MS };
+      return;
+    }
     const r = { rngState: hash32(a.seed, "flee", Math.floor(t / 1000)) };
+    if (sp.escape === "dive") {
+      // Utter och bäver: mot närmaste större vatten, och borta vid zonens inre gräns (spec: dyker undan). Aldrig ut på vattnet.
+      const area = sp.needs?.waterAreaM2 ?? WATER_ZONE.defaultAreaM2;
+      let best: { p: LatLon; w: number } | null = null;
+      for (let k = 0; k < 16; k++) {
+        const ang = (k / 16) * 2 * Math.PI;
+        const p = fromLocal(a.pos, { x: Math.sin(ang) * 25, y: Math.cos(ang) * 25 });
+        if (this.env.blocked(p) || this.env.hazard(p)) continue;
+        const w = this.env.waterDistM(p, WATER_ZONE.maxM + 30, area);
+        if (!best || w < best.w) best = { p, w };
+      }
+      a.flee = { target: best?.p ?? a.pos, leftM: best ? 25 : 0, kind: "dive" };
+      return;
+    }
     const away = toLocal(player, a.pos);
     const base = Math.atan2(away.x, away.y);
     const [f0, f1] = BEHAVIOR.fleeDistM;
@@ -211,23 +239,23 @@ export class WorldEngine {
       const score = Math.cos((offDeg * Math.PI) / 180) + (this.env.forestWithin(p, 15) ? 0.6 : 0) + rand(r) * 0.1;
       if (!best || score > best.score) best = { p, score };
     }
-    a.state = "flee";
-    a.disturbed = true;
-    a.flee = { target: best?.p ?? a.pos, leftM: best ? dist : 0 };
-    ev.push({ type: "flee", id: a.id, distM: Math.round(d), tempo, tMs: t });
+    a.flee = { target: best?.p ?? a.pos, leftM: best ? dist : 0, kind: "run" };
   }
 
   private fleeStep(a: Animal, dt: number, t: number, ev: EngineEvent[]): void {
     const f = a.flee;
-    if (!f || f.leftM <= 0) { this.gone(a, t, "fled", ev); return; }
+    if (f?.kind === "fly") { if (t >= (f.untilMs ?? t)) this.gone(a, t, "flew", ev); return; }
+    const reason: GoneReason = f?.kind === "dive" ? "dove" : "fled";
+    if (!f || f.leftM <= 0) { this.gone(a, t, reason, ev); return; }
     const sp = SPECIES[a.species];
+    if (f.kind === "dive" && this.env.waterDistM(a.pos, WATER_ZONE.minM, sp.needs?.waterAreaM2 ?? WATER_ZONE.defaultAreaM2) <= WATER_ZONE.minM) { this.gone(a, t, "dove", ev); return; }
     const v = toLocal(a.pos, f.target);
     const len = Math.hypot(v.x, v.y);
     const step = Math.min(len, sp.fleeMps * dt);
-    if (len < 0.5) { this.gone(a, t, "fled", ev); return; }
+    if (len < 0.5) { this.gone(a, t, reason, ev); return; }
     const next = fromLocal(a.pos, { x: (v.x / len) * step, y: (v.y / len) * step });
     // Aldrig in i byggnad, vatten eller över större väg: hellre försvinna (in i buskarna) än att springa dit.
-    if (this.env.blocked(next) || this.env.hazard(next)) { this.gone(a, t, "fled", ev); return; }
+    if (this.env.segmentBlocked(a.pos, next) || this.env.hazard(next)) { this.gone(a, t, reason, ev); return; }
     a.headingDeg = ((Math.atan2(v.x, v.y) * 180) / Math.PI + 360) % 360;
     a.pos = next;
     f.leftM -= step;

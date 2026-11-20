@@ -20,12 +20,14 @@ export interface Environment {
   habitat(p: LatLon): Habitat;
   /** I vatten eller byggnad (spec: aldrig in i byggnader eller vatten). */
   blocked(p: LatLon): boolean;
+  /** Sträckan a–b går in i vatten eller en byggnad (exakt: ändpunkterna och skärning med polygonkanterna). */
+  segmentBlocked(a: LatLon, b: LatLon): boolean;
   /** Inom marginalen från större väg eller järnväg. */
   hazard(p: LatLon): boolean;
   /** Avstånd (m) till närmaste gångbara linje, högst `maxM` (Infinity om ingen inom `maxM`). */
   walkableDistM(p: LatLon, maxM: number): number;
-  /** Avstånd (m) till närmaste vatten, högst `maxM`. */
-  waterDistM(p: LatLon, maxM: number): number;
+  /** Avstånd (m) till närmaste vatten med minst `minAreaM2` yta (standard: allt vatten utom bassänger), högst `maxM`. */
+  waterDistM(p: LatLon, maxM: number, minAreaM2?: number): number;
   /** Skog inom `r` m (skogsbryn och skydd vid flykt). */
   forestWithin(p: LatLon, r: number): boolean;
   /** Antal objekt (för diagnostik). */
@@ -33,7 +35,7 @@ export interface Environment {
 }
 
 type Ring = LatLon[];
-interface PolyRec { kind: string; rings: Ring[]; s: number; w: number; n: number; e: number }
+interface PolyRec { kind: string; rings: Ring[]; s: number; w: number; n: number; e: number; areaM2: number }
 interface LineRec { kind: string; pts: LatLon[]; s: number; w: number; n: number; e: number }
 
 /** Rutnätets cell i grader (~110 × 55 m på 59° N). */
@@ -43,7 +45,7 @@ const CELL = 0.001;
 function polyKind(f: MvtFeature): string | null {
   const c = String(f.props.class ?? "");
   switch (f.layer) {
-    case "water": return "water";
+    case "water": return c === "swimming_pool" ? null : "water";
     case "building": return "building";
     case "park": return "park";
     case "landcover":
@@ -85,6 +87,15 @@ function segDistM(p: LatLon, a: LatLon, b: LatLon): number {
   return Math.hypot(A.x + t * dx, A.y + t * dy);
 }
 
+/** Ytan (m²) av en ring i lat/lon (lokal plan runt första punkten). Vattenytor som delas av tile-gränser blir här mindre än de är. */
+function ringAreaM2(r: Ring): number {
+  if (r.length < 3) return 0;
+  const o = r[0];
+  let a = 0;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const P = toLocal(o, r[i]), Q = toLocal(o, r[j]); a += Q.x * P.y - P.x * Q.y; }
+  return Math.abs(a) / 2;
+}
+
 /** Prioritet när flera ytor överlappar (det mest specifika vinner). */
 const HABITAT_ORDER: Habitat[] = ["water", "wetland", "forest", "park", "field", "grass", "urban"];
 
@@ -109,7 +120,7 @@ export function makeEnvironment(features: MvtFeature[]): Environment {
         if (!rings.length || rings[0].length < 3) continue;
         let s = 90, w = 180, n = -90, e = -180;
         for (const p of rings[0]) { s = Math.min(s, p.lat); n = Math.max(n, p.lat); w = Math.min(w, p.lon); e = Math.max(e, p.lon); }
-        addTo(polys, { kind, rings, s, w, n, e });
+        addTo(polys, { kind, rings, s, w, n, e, areaM2: kind === "water" ? ringAreaM2(rings[0]) - rings.slice(1).reduce((a, h) => a + ringAreaM2(h), 0) : 0 });
         size++;
       }
     } else {
@@ -140,16 +151,21 @@ export function makeEnvironment(features: MvtFeature[]): Environment {
     for (const l of near(lines, p, maxM)) if (kinds.has(l.kind)) best = Math.min(best, segDistM(p, l.pts[0], l.pts[1]));
     return best <= maxM ? best : Infinity;
   };
-  const polyDist = (p: LatLon, kind: string, maxM: number) => {
+  const polyDist = (p: LatLon, kind: string, maxM: number, minAreaM2 = 0) => {
     let best = Infinity;
     for (const r of near(polys, p, maxM)) {
-      if (r.kind !== kind) continue;
+      if (r.kind !== kind || r.areaM2 < minAreaM2) continue;
       if (inRing(p, r.rings[0]) && !r.rings.slice(1).some((h) => inRing(p, h))) return 0;
       for (const ring of r.rings) for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) best = Math.min(best, segDistM(p, ring[j], ring[i]));
     }
     return best <= maxM ? best : Infinity;
   };
   const WALK = new Set(["walk"]), HAZ = new Set(["major", "rail"]);
+  const cross = (p1: LatLon, p2: LatLon, p3: LatLon, p4: LatLon) => {
+    const d = (a: LatLon, b: LatLon, c: LatLon) => (c.lon - a.lon) * (b.lat - a.lat) - (b.lon - a.lon) * (c.lat - a.lat);
+    const d1 = d(p3, p4, p1), d2 = d(p3, p4, p2), d3 = d(p1, p2, p3), d4 = d(p1, p2, p4);
+    return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
+  };
   return {
     size,
     habitat(p) {
@@ -159,9 +175,19 @@ export function makeEnvironment(features: MvtFeature[]): Environment {
       return "open";
     },
     blocked(p) { return containing(p).some((r) => r.kind === "water" || r.kind === "building"); },
+    segmentBlocked(a, b) {
+      if (this.blocked(a) || this.blocked(b)) return true;
+      const mid = { lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2 };
+      const half = Math.hypot(toLocal(a, b).x, toLocal(a, b).y) / 2 + 1;
+      for (const r of near(polys, mid, half)) {
+        if (r.kind !== "water" && r.kind !== "building") continue;
+        for (const ring of r.rings) for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) if (cross(a, b, ring[j], ring[i])) return true;
+      }
+      return false;
+    },
     hazard(p) { return lineDist(p, HAZ, ROAD_CLEARANCE_M) <= ROAD_CLEARANCE_M; },
     walkableDistM: (p, maxM) => lineDist(p, WALK, maxM),
-    waterDistM: (p, maxM) => polyDist(p, "water", maxM),
+    waterDistM: (p, maxM, minAreaM2 = 0) => polyDist(p, "water", maxM, minAreaM2),
     forestWithin: (p, r) => polyDist(p, "forest", r) <= r,
   };
 }
@@ -184,7 +210,8 @@ export function safeSpot(env: Environment, p: LatLon, maxWalkM = 60): boolean {
 }
 
 /** Hela sträckan a–b är säker (prov var `stepM` meter): djur går aldrig genom ett hus eller över en större väg. */
-export function safeSegment(env: Environment, a: LatLon, b: LatLon, maxWalkM = 60, stepM = 4): boolean {
+export function safeSegment(env: Environment, a: LatLon, b: LatLon, maxWalkM = 60, stepM = 2): boolean {
+  if (env.segmentBlocked(a, b)) return false;
   const d = Math.hypot(toLocal(a, b).x, toLocal(a, b).y);
   const k = Math.max(1, Math.ceil(d / stepM));
   for (let i = 1; i <= k; i++) {

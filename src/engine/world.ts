@@ -3,7 +3,8 @@ import { safeSegment, safeSpot, type Environment } from "@/geo/environment";
 import { rand, type RngHolder } from "./core/rng";
 import { BEHAVIOR, SPAWN, WORLD } from "./config";
 import { hash32, idOf } from "./hash";
-import { PHASE1_SPECIES, SPECIES, speciesWeight, type SpeciesId } from "./species";
+import { ALL_SPECIES, SPECIES, WATER_ZONE, inWaterZone, speciesWeight, type SpeciesId, type WaterContext } from "./species";
+import { dayPhase } from "./sun";
 
 /**
  * Den delade, deterministiska världen (spec: Djur och spelvärld → Deterministisk värld). Ingen server: varje telefon räknar fram samma
@@ -60,6 +61,14 @@ export interface Candidate {
   window: number;
   /** Ordning inom rutan (löpnummer). */
   n: number;
+  /** Sällsynt utseende (spec: Varianter), eller undefined. */
+  variant?: string;
+}
+
+/** Vattnet runt en plats för artvikterna (lat: räknas bara om en vattenart frågar). */
+export function waterAt(env: Environment, p: LatLon): WaterContext {
+  const memo = new Map<number, number>();
+  return { distToWater: (a) => { let d = memo.get(a); if (d === undefined) { d = env.waterDistM(p, WATER_ZONE.maxM + 1, a); memo.set(a, d); } return d; } };
 }
 
 const rng = (seed: number): RngHolder => ({ rngState: seed >>> 0 });
@@ -80,12 +89,17 @@ export function candidates(c: Cell, window: number, env: Environment): Candidate
     if (!home) continue;
     const hab = env.habitat(home);
     const forestNear = hab !== "forest" && env.forestWithin(home, 40);
-    const weights = PHASE1_SPECIES.map((id) => speciesWeight(SPECIES[id], hab, forestNear));
+    // Dygnets fas mitt i fönstret och mitt i rutan: samma för alla telefoner.
+    const phase = dayPhase((window + 0.5) * WORLD.windowMs, (b.s + b.n) / 2, (b.w + b.e) / 2);
+    const ctx = { habitat: hab, forestNear, water: waterAt(env, home), phase, level: 0 as const };
+    const weights = ALL_SPECIES.map((id) => speciesWeight(SPECIES[id], ctx));
     const total = weights.reduce((a, x) => a + x, 0);
     if (total <= 0) continue;
-    let x = rand(r) * total, species = PHASE1_SPECIES[PHASE1_SPECIES.length - 1];
-    for (let i = 0; i < weights.length; i++) { x -= weights[i]; if (x <= 0) { species = PHASE1_SPECIES[i]; break; } }
-    out.push({ id: idOf(indSeed), species, home, seed: indSeed, cell: c, window, n });
+    let x = rand(r) * total, species = ALL_SPECIES[ALL_SPECIES.length - 1];
+    for (let i = 0; i < weights.length; i++) { x -= weights[i]; if (x <= 0) { species = ALL_SPECIES[i]; break; } }
+    let variant: string | undefined;
+    for (const v of SPECIES[species].variants ?? []) if (rand(r) < v.chance) { variant = v.id; break; }
+    out.push({ id: idOf(indSeed), species, home, seed: indSeed, cell: c, window, n, ...(variant ? { variant } : {}) });
   }
   return out;
 }
@@ -104,6 +118,9 @@ export function idlePose(c: Candidate, tMs: number, env: Environment): IdlePose 
   const t0 = c.window * WORLD.windowMs;
   const sp = SPECIES[c.species];
   let pos = c.home, heading = rand(r) * 360, t = t0;
+  // Havsörnen sitter still (högt, på en trädtopp eller ett stenblock).
+  if (sp.walkMps <= 0) return { pos, state: "rest", headingDeg: heading };
+  const zoneOk = (p: LatLon) => !sp.needs?.waterZone || inWaterZone(sp, waterAt(env, p));
   const [l0, l1] = BEHAVIOR.idleLegS, [w0, w1] = BEHAVIOR.wanderM;
   for (let guard = 0; guard < 2000; guard++) {
     const kind = rand(r);
@@ -115,7 +132,7 @@ export function idlePose(c: Candidate, tMs: number, env: Environment): IdlePose 
       const off = toLocal(c.home, pos);
       const a = (dir * Math.PI) / 180;
       const tgt = fromLocal(c.home, { x: off.x + Math.sin(a) * dist, y: off.y + Math.cos(a) * dist });
-      const okTgt = Math.hypot(off.x + Math.sin(a) * dist, off.y + Math.cos(a) * dist) <= 80 && safeSegment(env, pos, tgt, SPAWN.maxFromWalkM);
+      const okTgt = Math.hypot(off.x + Math.sin(a) * dist, off.y + Math.cos(a) * dist) <= 80 && safeSegment(env, pos, tgt, SPAWN.maxFromWalkM) && zoneOk(tgt);
       const dur = okTgt ? dist / sp.walkMps : legS;
       if (tMs < t + dur * 1000) {
         if (!okTgt) return { pos, state: "rest", headingDeg: heading };

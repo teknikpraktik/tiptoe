@@ -1,0 +1,546 @@
+{
+ "version": 1,
+ "note": "Platshållare (egen grafik, fri att använda). Byt fil och post per art när riktiga bilder med licens finns.",
+ "species": {
+  "squirrel": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/squirrel-side-calm.png",
+      "aspect": 1.386
+     },
+     "alert": {
+      "src": "/animals/placeholder/squirrel-side-alert.png",
+      "aspect": 1.386
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/squirrel-front-calm.png",
+      "aspect": 0.839
+     },
+     "alert": {
+      "src": "/animals/placeholder/squirrel-front-alert.png",
+      "aspect": 0.566
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/squirrel-back-calm.png",
+      "aspect": 0.757
+     },
+     "alert": {
+      "src": "/animals/placeholder/squirrel-back-alert.png",
+      "aspect": 0.583
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "hare": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/hare-side-calm.png",
+      "aspect": 1.454
+     },
+     "alert": {
+      "src": "/animals/placeholder/hare-side-alert.png",
+      "aspect": 0.949
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/hare-front-calm.png",
+      "aspect": 0.78
+     },
+     "alert": {
+      "src": "/animals/placeholder/hare-front-alert.png",
+      "aspect": 0.57
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/hare-back-calm.png",
+      "aspect": 0.539
+     },
+     "alert": {
+      "src": "/animals/placeholder/hare-back-alert.png",
+      "aspect": 0.44
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "roe_deer": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/roe_deer-side-calm.png",
+      "aspect": 1.502
+     },
+     "alert": {
+      "src": "/animals/placeholder/roe_deer-side-alert.png",
+      "aspect": 0.932
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/roe_deer-front-calm.png",
+      "aspect": 0.551
+     },
+     "alert": {
+      "src": "/animals/placeholder/roe_deer-front-alert.png",
+      "aspect": 0.371
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/roe_deer-back-calm.png",
+      "aspect": 0.519
+     },
+     "alert": {
+      "src": "/animals/placeholder/roe_deer-back-alert.png",
+      "aspect": 0.378
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "red_fox": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/red_fox-side-calm.png",
+      "aspect": 2.732
+     },
+     "alert": {
+      "src": "/animals/placeholder/red_fox-side-alert.png",
+      "aspect": 1.657
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/red_fox-front-calm.png",
+      "aspect": 0.621
+     },
+     "alert": {
+      "src": "/animals/placeholder/red_fox-front-alert.png",
+      "aspect": 0.427
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/red_fox-back-calm.png",
+      "aspect": 0.528
+     },
+     "alert": {
+      "src": "/animals/placeholder/red_fox-back-alert.png",
+      "aspect": 0.406
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "hedgehog": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/hedgehog-side-calm.png",
+      "aspect": 1.681
+     },
+     "alert": {
+      "src": "/animals/placeholder/hedgehog-side-alert.png",
+      "aspect": 1.549
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/hedgehog-front-calm.png",
+      "aspect": 0.963
+     },
+     "alert": {
+      "src": "/animals/placeholder/hedgehog-front-alert.png",
+      "aspect": 0.746
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/hedgehog-back-calm.png",
+      "aspect": 0.963
+     },
+     "alert": {
+      "src": "/animals/placeholder/hedgehog-back-alert.png",
+      "aspect": 0.77
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "badger": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/badger-side-calm.png",
+      "aspect": 2.478
+     },
+     "alert": {
+      "src": "/animals/placeholder/badger-side-alert.png",
+      "aspect": 1.709
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/badger-front-calm.png",
+      "aspect": 0.803
+     },
+     "alert": {
+      "src": "/animals/placeholder/badger-front-alert.png",
+      "aspect": 0.581
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/badger-back-calm.png",
+      "aspect": 0.748
+     },
+     "alert": {
+      "src": "/animals/placeholder/badger-back-alert.png",
+      "aspect": 0.599
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "beaver": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/beaver-side-calm.png",
+      "aspect": 3.08
+     },
+     "alert": {
+      "src": "/animals/placeholder/beaver-side-alert.png",
+      "aspect": 2.147
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/beaver-front-calm.png",
+      "aspect": 0.912
+     },
+     "alert": {
+      "src": "/animals/placeholder/beaver-front-alert.png",
+      "aspect": 0.663
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/beaver-back-calm.png",
+      "aspect": 0.88
+     },
+     "alert": {
+      "src": "/animals/placeholder/beaver-back-alert.png",
+      "aspect": 0.683
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "wild_boar": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/wild_boar-side-calm.png",
+      "aspect": 1.986
+     },
+     "alert": {
+      "src": "/animals/placeholder/wild_boar-side-alert.png",
+      "aspect": 1.383
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/wild_boar-front-calm.png",
+      "aspect": 0.745
+     },
+     "alert": {
+      "src": "/animals/placeholder/wild_boar-front-alert.png",
+      "aspect": 0.55
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/wild_boar-back-calm.png",
+      "aspect": 0.69
+     },
+     "alert": {
+      "src": "/animals/placeholder/wild_boar-back-alert.png",
+      "aspect": 0.566
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "moose": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/moose-side-calm.png",
+      "aspect": 1.348
+     },
+     "alert": {
+      "src": "/animals/placeholder/moose-side-alert.png",
+      "aspect": 0.918
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/moose-front-calm.png",
+      "aspect": 0.772
+     },
+     "alert": {
+      "src": "/animals/placeholder/moose-front-alert.png",
+      "aspect": 0.56
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/moose-back-calm.png",
+      "aspect": 0.722
+     },
+     "alert": {
+      "src": "/animals/placeholder/moose-back-alert.png",
+      "aspect": 0.572
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "capercaillie": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/capercaillie-side-calm.png",
+      "aspect": 1.049
+     },
+     "alert": {
+      "src": "/animals/placeholder/capercaillie-side-alert.png",
+      "aspect": 0.968
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/capercaillie-front-calm.png",
+      "aspect": 0.792
+     },
+     "alert": {
+      "src": "/animals/placeholder/capercaillie-front-alert.png",
+      "aspect": 0.73
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/capercaillie-back-calm.png",
+      "aspect": 0.862
+     },
+     "alert": {
+      "src": "/animals/placeholder/capercaillie-back-alert.png",
+      "aspect": 0.795
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "otter": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/otter-side-calm.png",
+      "aspect": 5.357
+     },
+     "alert": {
+      "src": "/animals/placeholder/otter-side-alert.png",
+      "aspect": 3.324
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/otter-front-calm.png",
+      "aspect": 1.022
+     },
+     "alert": {
+      "src": "/animals/placeholder/otter-front-alert.png",
+      "aspect": 0.665
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/otter-back-calm.png",
+      "aspect": 0.942
+     },
+     "alert": {
+      "src": "/animals/placeholder/otter-back-alert.png",
+      "aspect": 0.687
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "lynx": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/lynx-side-calm.png",
+      "aspect": 1.585
+     },
+     "alert": {
+      "src": "/animals/placeholder/lynx-side-alert.png",
+      "aspect": 1.037
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/lynx-front-calm.png",
+      "aspect": 0.563
+     },
+     "alert": {
+      "src": "/animals/placeholder/lynx-front-alert.png",
+      "aspect": 0.408
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/lynx-back-calm.png",
+      "aspect": 0.517
+     },
+     "alert": {
+      "src": "/animals/placeholder/lynx-back-alert.png",
+      "aspect": 0.418
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "wolf": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/wolf-side-calm.png",
+      "aspect": 2.147
+     },
+     "alert": {
+      "src": "/animals/placeholder/wolf-side-alert.png",
+      "aspect": 1.4
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/wolf-front-calm.png",
+      "aspect": 0.562
+     },
+     "alert": {
+      "src": "/animals/placeholder/wolf-front-alert.png",
+      "aspect": 0.394
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/wolf-back-calm.png",
+      "aspect": 0.521
+     },
+     "alert": {
+      "src": "/animals/placeholder/wolf-back-alert.png",
+      "aspect": 0.403
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "brown_bear": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/brown_bear-side-calm.png",
+      "aspect": 1.51
+     },
+     "alert": {
+      "src": "/animals/placeholder/brown_bear-side-alert.png",
+      "aspect": 1.127
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/brown_bear-front-calm.png",
+      "aspect": 0.729
+     },
+     "alert": {
+      "src": "/animals/placeholder/brown_bear-front-alert.png",
+      "aspect": 0.571
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/brown_bear-back-calm.png",
+      "aspect": 0.729
+     },
+     "alert": {
+      "src": "/animals/placeholder/brown_bear-back-alert.png",
+      "aspect": 0.583
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  },
+  "white_tailed_eagle": {
+   "views": {
+    "side": {
+     "calm": {
+      "src": "/animals/placeholder/white_tailed_eagle-side-calm.png",
+      "aspect": 0.626
+     },
+     "alert": {
+      "src": "/animals/placeholder/white_tailed_eagle-side-alert.png",
+      "aspect": 0.58
+     }
+    },
+    "front": {
+     "calm": {
+      "src": "/animals/placeholder/white_tailed_eagle-front-calm.png",
+      "aspect": 0.469
+     },
+     "alert": {
+      "src": "/animals/placeholder/white_tailed_eagle-front-alert.png",
+      "aspect": 0.435
+     }
+    },
+    "back": {
+     "calm": {
+      "src": "/animals/placeholder/white_tailed_eagle-back-calm.png",
+      "aspect": 0.469
+     },
+     "alert": {
+      "src": "/animals/placeholder/white_tailed_eagle-back-alert.png",
+      "aspect": 0.435
+     }
+    }
+   },
+   "license": "placeholder (egen, fri)",
+   "placeholder": true
+  }
+ }
+}

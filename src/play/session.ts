@@ -383,4 +383,4 @@ export class WalkSession {
 const ll = (p: TrackPoint): LatLon => ({ lat: p.lat, lon: p.lon });
 
 /** Miljö innan tiles har lästs in: allt är spärrat, så inga djur kan dyka upp. */
-const emptyEnv: Environment = { habitat: () => "open", blocked: () => true, hazard: () => true, walkableDistM: () => Infinity, waterDistM: () => Infinity, forestWithin: () => false, size: 0 };
+const emptyEnv: Environment = { habitat: () => "open", blocked: () => true, segmentBlocked: () => true, hazard: () => true, walkableDistM: () => Infinity, waterDistM: () => Infinity, forestWithin: () => false, size: 0 };
