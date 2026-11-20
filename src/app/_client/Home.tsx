@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { PHASE1_SPECIES } from "@/engine/species";
+import { ALL_SPECIES } from "@/engine/species";
 import { useT } from "./i18n";
 import { installPrompt, isIos, isStandalone } from "./install";
 import { Modal } from "./Modal";
@@ -48,7 +48,7 @@ export function Home() {
           </div>
         )}
         {v && v.storage === "ok" && (
-          <p className="muted center" data-testid="stats">{t("home.stats", { points: v.score.total, species: v.score.species.length, total: PHASE1_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
+          <p className="muted center" data-testid="stats">{t("home.stats", { points: v.score.total, species: v.score.species.length, total: ALL_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
         )}
         <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{going ? t("walk.resume") : t("home.startWalk")}</button>
         <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.fieldbook")}</button>

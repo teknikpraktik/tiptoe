@@ -2,19 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { listPhotos, photoId, savePhoto } from "@/storage/photos";
-import { CameraView, prepareCameraView, type AnimalImages, type CameraMetrics, type Pose, type ShotResult } from "../../_client/CameraView";
+import { CameraView, prepareCameraView, type CameraMetrics, type Pose, type ShotResult } from "../../_client/CameraView";
+import { animalManifest, type AnimalManifest } from "../../_client/animalImages";
 import { PageHeader } from "../../_client/Modal";
 import { appDb } from "../../_client/db";
 import { useT } from "../../_client/i18n";
 import { createOrientationSource, type OrientationStatus } from "../../_client/orientationSource";
 import { shareOrDownload } from "../../_client/share";
 
-const ROE: AnimalImages = {
-  side: { calm: "/animals/placeholder/roe-side-calm.png", alert: "/animals/placeholder/roe-side-alert.png" },
-  front: { calm: "/animals/placeholder/roe-front-calm.png", alert: "/animals/placeholder/roe-front-alert.png" },
-  back: { calm: "/animals/placeholder/roe-back-calm.png", alert: "/animals/placeholder/roe-back-alert.png" },
-  aspect: 1.5,
-};
 
 interface LogLine { t: number; event: string; data?: Record<string, unknown> }
 
@@ -35,6 +30,8 @@ export function CameraTest() {
   const [metrics, setMetrics] = useState<CameraMetrics | null>(null);
   const [log, setLog] = useState<LogLine[]>([]);
   const [copied, setCopied] = useState(false);
+  const [manifest, setManifest] = useState<AnimalManifest | null>(null);
+  useEffect(() => { void animalManifest().then(setManifest); }, []);
   const add = (event: string, data?: Record<string, unknown>) => setLog((l) => [...l.slice(-199), { t: Date.now(), event, data }]);
 
   useEffect(() => { void appDb().then(async (db) => { if (db) setCount((await listPhotos(db)).length); }); }, []);
@@ -104,9 +101,9 @@ export function CameraTest() {
           <pre className="mono">{log.slice(-20).map((l) => `${new Date(l.t).toISOString().slice(11, 19)} ${l.event} ${l.data ? JSON.stringify(l.data) : ""}`).join("\n")}</pre>
         </details>
       </div>
-      {open && (
+      {open && manifest && (
         <CameraView
-          target={{ bearingDeg: bearing, distM: dist, headingDeg: (bearing + animalHeading) % 360, heightM: 0.8, photoDistM: 30, pose, images: ROE }}
+          target={{ bearingDeg: bearing, distM: dist, headingDeg: (bearing + animalHeading) % 360, heightM: 0.8, photoDistM: 30, pose, images: manifest.species.roe_deer.views }}
           canShoot
           orientation={orientation}
           onClose={() => setOpen(false)}

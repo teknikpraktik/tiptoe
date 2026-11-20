@@ -9,13 +9,13 @@ import { useT } from "./i18n";
 import { createOrientationSource, type OrientationSample, type OrientationStatus } from "./orientationSource";
 
 export type Pose = "calm" | "alert";
+/** En bild: sökväg och bredd/höjd (bilden är beskuren tätt: höjden = djurets höjd). */
+export interface AnimalImage { src: string; aspect: number }
+/** Utklipp per vinkel och pose (sidan = vänster sida; höger speglas). Laddas ur public/animals/manifest.json. */
 export interface AnimalImages {
-  /** Utklipp per vinkel och pose (vänster sida; höger speglas). */
-  side: Record<Pose, string>;
-  front: Record<Pose, string>;
-  back: Record<Pose, string>;
-  /** Utklippens bredd/höjd. */
-  aspect: number;
+  side: Record<Pose, AnimalImage>;
+  front: Record<Pose, AnimalImage>;
+  back: Record<Pose, AnimalImage>;
 }
 
 export interface CameraTarget {
@@ -172,9 +172,9 @@ export function CameraView(props: {
       const el = img.current, sh = shadow.current;
       if (!el || !sh) return;
       const vw = viewFor(tg.headingDeg, tg.bearingDeg);
-      const src = imageFor(tg.images, vw, tg.pose);
-      if (el.getAttribute("src") !== src) el.setAttribute("src", src);
-      const h = pl.heightFrac * H, w = h * tg.images.aspect;
+      const im = imageFor(tg.images, vw, tg.pose);
+      if (el.getAttribute("src") !== im.src) el.setAttribute("src", im.src);
+      const h = pl.heightFrac * H, w = h * im.aspect;
       const x = pl.x * W - w / 2, y = pl.y * H - h;
       const blur = lookFor(distanceQuality(tg.distM, tg.photoDistM)).blurPx;
       el.style.display = "block";
@@ -209,7 +209,8 @@ export function CameraView(props: {
       const look = lookFor(q);
       const vw = viewFor(tg.headingDeg, tg.bearingDeg);
       let animal: Parameters<typeof drawComposite>[3]["animal"] = null;
-      if (pl) animal = { img: await loadImage(imageFor(tg.images, vw, tg.pose)), imgAspect: tg.images.aspect, x: pl.x, y: pl.y, heightFrac: pl.heightFrac, mirror: vw === "right", blurPx: look.blurPx * (size.h / box.clientHeight) * 0.6, shadow: true };
+      const im = imageFor(tg.images, vw, tg.pose);
+      if (pl) animal = { img: await loadImage(im.src), imgAspect: im.aspect, x: pl.x, y: pl.y, heightFrac: pl.heightFrac, mirror: vw === "right", blurPx: look.blurPx * (size.h / box.clientHeight) * 0.6, shadow: true };
       drawComposite(ctx, size.w, size.h, { video: v, videoW: v.videoWidth, videoH: v.videoHeight, viewAspect: aspect, zoom: z, animal, grain: look.grain, makeCanvas: (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; } });
       const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.82));
       if (!blob) throw new Error("toBlob failed");
@@ -251,7 +252,7 @@ export function CameraView(props: {
   );
 }
 
-function imageFor(images: AnimalImages, v: View, pose: Pose): string {
+function imageFor(images: AnimalImages, v: View, pose: Pose): AnimalImage {
   return v === "front" ? images.front[pose] : v === "back" ? images.back[pose] : images.side[pose];
 }
 

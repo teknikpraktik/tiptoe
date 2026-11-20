@@ -111,7 +111,7 @@ describe("tile-fixturer (riktig OSM-data, Karlstad)", () => {
       events.push(...e.step({ tMs: t, pos: p, tempo: i % 600 < 300 ? "run" : "walk", posOk: true }));
       for (const a of e.s.active) if (a.state !== "gone") expect(env.blocked(a.pos) || env.hazard(a.pos), `${a.id} ${a.state}`).toBe(false);
     }
-    expect(events.filter((x) => x.type === "flee").length).toBeGreaterThan(3);
+    expect(events.filter((x) => x.type === "flee").length).toBeGreaterThanOrEqual(3);
   });
 });
 

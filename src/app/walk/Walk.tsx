@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SPECIES } from "@/engine/species";
 import type { PhotoResult } from "@/play/session";
-import { CameraView, prepareCameraView, type AnimalImages, type CameraTarget, type ShotResult } from "../_client/CameraView";
+import { CameraView, prepareCameraView, type CameraTarget, type ShotResult } from "../_client/CameraView";
+import { animalManifest, type AnimalManifest } from "../_client/animalImages";
 import { CloseButton, Modal } from "../_client/Modal";
 import { useT } from "../_client/i18n";
 import type { OrientationStatus } from "../_client/orientationSource";
@@ -13,13 +14,6 @@ import { shareOrDownload } from "../_client/share";
 
 const GameMap = dynamic(() => import("../_client/GameMap"), { ssr: false });
 
-/** Fas 1: platshållarutklipp (rådjurets form) för alla fem arter; fas 2 har riktiga bilder per art. */
-const PLACEHOLDER: AnimalImages = {
-  side: { calm: "/animals/placeholder/roe-side-calm.png", alert: "/animals/placeholder/roe-side-alert.png" },
-  front: { calm: "/animals/placeholder/roe-front-calm.png", alert: "/animals/placeholder/roe-front-alert.png" },
-  back: { calm: "/animals/placeholder/roe-back-calm.png", alert: "/animals/placeholder/roe-back-alert.png" },
-  aspect: 1.5,
-};
 
 const fmtHa = (m2: number) => (m2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1, minimumFractionDigits: m2 < 100_000 ? 1 : 0 });
 
@@ -36,6 +30,8 @@ export function Walk() {
   const [result, setResult] = useState<{ r: PhotoResult | null; url: string; blob: Blob; missed: boolean } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const lastClosure = useRef<number | null>(null);
+  const [manifest, setManifest] = useState<AnimalManifest | null>(null);
+  useEffect(() => { void animalManifest().then(setManifest); }, []);
 
   // Ny yta: kort meddelande med hektartal.
   useEffect(() => {
@@ -56,15 +52,17 @@ export function Walk() {
       const c = ctx.session.cameraTarget(camera.id);
       if (!c || c.state === "gone") { setCamera(null); return; }
       const sp = SPECIES[c.species];
-      setTarget({ bearingDeg: c.bearingDeg, distM: c.distM, headingDeg: c.headingDeg, heightM: sp.heightM, photoDistM: sp.photoM, pose: c.state === "alert" ? "alert" : "calm", images: PLACEHOLDER });
+      const images = manifest?.species[c.species]?.views;
+      if (!images) return;
+      setTarget({ bearingDeg: c.bearingDeg, distM: c.distM, headingDeg: c.headingDeg, heightM: sp.heightM, photoDistM: sp.photoM, pose: c.state === "alert" ? "alert" : "calm", images });
     };
     upd();
     const h = setInterval(upd, 250);
     return () => clearInterval(h);
-  }, [camera, ctx]);
+  }, [camera, ctx, manifest]);
   useEffect(() => { if (camera && (v?.tempo === "walk" || v?.tempo === "run")) setCamera(null); }, [camera, v?.tempo]);
 
-  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, label: t("walk.animalNear", { species: t(`species.${a.species}`), m: Math.round(a.distM) }) })), [v?.animals, t]);
+  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, label: t("walk.animalNear", { species: t(`species.${a.species}`), m: Math.round(a.distM) }) })), [v?.animals, t]);
   const reserves = useMemo(() => (v?.reserves ?? []).map((r) => r.rings), [v?.reserves]);
   const closure = useMemo(() => (v?.lastClosure ? { id: v.lastClosure.id, pieces: v.lastClosure.pieces } : null), [v?.lastClosure]);
 

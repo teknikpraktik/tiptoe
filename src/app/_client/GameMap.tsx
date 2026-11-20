@@ -29,7 +29,7 @@ function circle(c: LatLon, rM: number): GeoJSON.Feature {
 const ARROW_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#f4e9cf" stroke="#2b2f27" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
 const DOT_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7.5" fill="#f4e9cf" stroke="#2b2f27" stroke-width="3"/></svg>`;
 
-export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string }
+export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string; escape?: string }
 
 export interface GameMapProps {
   player?: LatLon | null;
@@ -168,6 +168,7 @@ export default function GameMap(props: GameMapProps) {
       x.target = { lat: a.lat, lon: a.lon };
       x.el.dataset.state = a.state;
       x.el.dataset.rarity = a.rarity;
+      x.el.dataset.escape = a.escape ?? "run";
       x.el.setAttribute("aria-label", a.label);
     }
     for (const [id, x] of animalMarkers.current) if (!live.has(id)) { x.m.remove(); animalMarkers.current.delete(id); }
