@@ -4,6 +4,7 @@ GPS-baserad PWA där spelaren smyger sig nära virtuella vilda djur och fotograf
 
 - Produktspecifikation: [`docs/SPEC.md`](docs/SPEC.md)
 - Arbetsinstruktion för fas 1: [`docs/PROMPT-FAS1.md`](docs/PROMPT-FAS1.md)
+- Beslut efter fas 1: [`docs/BESLUT.md`](docs/BESLUT.md)
 
 Utvecklingen sker via PR mot `main`. Ingen kod ligger på `main` förrän första PR:en är granskad och mergad.
 

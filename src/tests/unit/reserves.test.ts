@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { computeReserves, simplify, splitTrack, DEFAULT_RESERVE_OPTIONS, type Reserve, type TrackPoint } from "@/geo/reserves/reserves";
 import { clipper2Ts } from "@/geo/reserves/ops-clipper2-ts";
-import { jsts } from "@/geo/reserves/ops-jsts";
 import type { PolygonOps } from "@/geo/reserves/ops";
 import { ORIGIN, filtered, rect, walk } from "@/sim/tracks";
 import { fromLocal } from "@/geo/geometry";
 
-const LIBS: PolygonOps[] = [clipper2Ts, jsts];
+const LIBS: PolygonOps[] = [clipper2Ts];
 
 const run = (ops: PolygonOps, track: TrackPoint[], existing: Reserve[] = [], options = {}) => {
   let n = 0;

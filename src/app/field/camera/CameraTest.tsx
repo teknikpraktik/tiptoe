@@ -14,27 +14,25 @@ const ROE: AnimalImages = {
   front: { calm: "/animals/placeholder/roe-front-calm.png", alert: "/animals/placeholder/roe-front-alert.png" },
   back: { calm: "/animals/placeholder/roe-back-calm.png", alert: "/animals/placeholder/roe-back-alert.png" },
   aspect: 1.5,
-  glb: "/animals/placeholder/roe.glb",
 };
 
 interface LogLine { t: number; event: string; data?: Record<string, unknown> }
 
 /**
- * Spik 1: kamerakedjan i installerad PWA. Ett platshållarrådjur placeras rakt fram i den riktning kameran pekar när vyn öppnas (efter
- * kompassen, om den finns). 2D-utklipp och 3D-modell kan jämföras; mätvärden kan kopieras till rapporten.
+ * Kameratest för fälttestet (från spik 1, 2D): ett platshållarrådjur placeras rakt fram i den riktning kameran pekar när vyn öppnas (efter
+ * kompassen, om den finns). Mätvärden kan kopieras till fältprotokollet.
  */
-export function CameraSpike() {
+export function CameraTest() {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [orientation, setOrientation] = useState<OrientationStatus>("unsupported");
-  const [mode, setMode] = useState<"2d" | "3d">("2d");
   const [dist, setDist] = useState(20);
   const [pose, setPose] = useState<Pose>("calm");
   const [animalHeading, setAnimalHeading] = useState(90);
   const [bearing, setBearing] = useState(0);
   const [shot, setShot] = useState<{ url: string; blob: Blob; r: ShotResult } | null>(null);
   const [count, setCount] = useState(0);
-  const [metrics, setMetrics] = useState<Record<"2d" | "3d", CameraMetrics | null>>({ "2d": null, "3d": null });
+  const [metrics, setMetrics] = useState<CameraMetrics | null>(null);
   const [log, setLog] = useState<LogLine[]>([]);
   const [copied, setCopied] = useState(false);
   const add = (event: string, data?: Record<string, unknown>) => setLog((l) => [...l.slice(-199), { t: Date.now(), event, data }]);
@@ -66,7 +64,7 @@ export function CameraSpike() {
     setShot({ url: URL.createObjectURL(r.blob), blob: r.blob, r });
     const db = await appDb();
     if (db) {
-      await savePhoto(db, { id: photoId(Date.now()), createdAt: Date.now(), blob: r.blob, width: r.width, height: r.height, meta: { mode: r.mode, zoom: r.zoom, distM: dist, inFrame: r.placement.inFrame } });
+      await savePhoto(db, { id: photoId(Date.now()), createdAt: Date.now(), blob: r.blob, width: r.width, height: r.height, meta: { zoom: r.zoom, distM: dist, inFrame: r.placement.inFrame } });
       setCount((await listPhotos(db)).length);
       add("photo_saved", { bytes: r.blob.size });
     } else add("photo_not_saved", { reason: "no IndexedDB" });
@@ -76,13 +74,9 @@ export function CameraSpike() {
 
   return (
     <main className="page">
-      <PageHeader title={t("spike.title")} />
+      <PageHeader title={t("spike.title")} href="/field" />
       <div className="pagebody">
         <p>{t("spike.intro")}</p>
-        <div className="seg">
-          <button className={`btn small ${mode === "2d" ? "on" : ""}`} onClick={() => setMode("2d")}>{t("spike.mode2d")}</button>
-          <button className={`btn small ${mode === "3d" ? "on" : ""}`} onClick={() => setMode("3d")}>{t("spike.mode3d")}</button>
-        </div>
         <label className="field">{t("spike.distance", { m: dist })}<input type="range" min={5} max={60} value={dist} onChange={(e) => setDist(Number(e.target.value))} /></label>
         <label className="field">{t("spike.view", { deg: animalHeading })}<input type="range" min={0} max={359} step={15} value={animalHeading} onChange={(e) => setAnimalHeading(Number(e.target.value))} /></label>
         <div className="seg">
@@ -113,13 +107,12 @@ export function CameraSpike() {
       {open && (
         <CameraView
           target={{ bearingDeg: bearing, distM: dist, headingDeg: (bearing + animalHeading) % 360, heightM: 0.8, photoDistM: 30, pose, images: ROE }}
-          mode={mode}
           canShoot
           orientation={orientation}
           onClose={() => setOpen(false)}
           onShot={onShot}
           onLog={add}
-          onMetrics={(m) => setMetrics((x) => ({ ...x, [mode]: m }))}
+          onMetrics={setMetrics}
         />
       )}
     </main>

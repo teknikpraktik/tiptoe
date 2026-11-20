@@ -61,10 +61,8 @@ export const sv = {
   "camera.again": "Ta ett till",
   "camera.photoTitle": "Tiptoe-foto",
 
-  "spike.title": "Kameratest (spik 1)",
-  "spike.intro": "Ett platshållarrådjur placeras framför dig. Vrid telefonen, ta foto och spara till Bilder. Jämför 2D och 3D.",
-  "spike.mode2d": "2D-utklipp",
-  "spike.mode3d": "3D-modell",
+  "spike.title": "Kameratest",
+  "spike.intro": "Ett platshållarrådjur placeras framför dig. Vrid telefonen, ta foto och spara till Bilder. Kontrollera att djuret står kvar på marken när du vrider dig.",
   "spike.distance": "Avstånd: {m} m",
   "spike.pose": "Pose",
   "spike.poseCalm": "Lugn",
@@ -76,11 +74,6 @@ export const sv = {
   "spike.copied": "Kopierat",
   "home.tests": "Test (fas 1)",
 
-  "spike2.title": "Geometritest (spik 2)",
-  "spike2.intro": "Jämför polygonbiblioteken för reservat på den här telefonen: korrekthet på testslingorna och tid för en lång promenad.",
-  "spike2.run": "Kör jämförelsen",
-  "spike2.running": "Kör {lib} …",
-  "spike2.result": "{passed}/{total} testslingor rätt · lång promenad ({n} punkter): {ms} ms",
 
   "species.squirrel": "Ekorre",
   "species.roe_deer": "Rådjur",

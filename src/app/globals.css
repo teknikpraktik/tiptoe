@@ -88,8 +88,6 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .cam-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; }
 .cam-animal { position: absolute; left: 0; top: 0; display: none; transform-origin: 50% 50%; will-change: transform; pointer-events: none; }
 .cam-shadow { position: absolute; left: 0; top: 0; display: none; border-radius: 50%; background: radial-gradient(closest-side, rgba(10,8,5,.55), rgba(10,8,5,0)); pointer-events: none; }
-.cam-three-host { position: absolute; inset: 0; pointer-events: none; }
-.cam-three { width: 100%; height: 100%; display: block; }
 /* Filmisk look i förhandsvisningen (samma som i fotot): varm ton, vinjett. */
 .cam-look { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,.5) 100%), rgba(232,184,120,.08); mix-blend-mode: normal; }
 .cam-top { position: absolute; top: calc(12px + var(--safe-top)); left: 12px; right: 12px; display: flex; gap: 8px; flex-wrap: wrap; }

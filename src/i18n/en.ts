@@ -60,10 +60,8 @@ export const en: Record<MessageKey, string> = {
   "camera.again": "Take another",
   "camera.photoTitle": "Tiptoe photo",
 
-  "spike.title": "Camera test (spike 1)",
-  "spike.intro": "A placeholder roe deer is placed in front of you. Turn the phone, take a photo and save it to Photos. Compare 2D and 3D.",
-  "spike.mode2d": "2D cut-out",
-  "spike.mode3d": "3D model",
+  "spike.title": "Camera test",
+  "spike.intro": "A placeholder roe deer is placed in front of you. Turn the phone, take a photo and save it to Photos. Check that the animal stays on the ground when you turn.",
   "spike.distance": "Distance: {m} m",
   "spike.pose": "Pose",
   "spike.poseCalm": "Calm",
@@ -75,11 +73,6 @@ export const en: Record<MessageKey, string> = {
   "spike.copied": "Copied",
   "home.tests": "Tests (phase 1)",
 
-  "spike2.title": "Geometry test (spike 2)",
-  "spike2.intro": "Compares the polygon libraries for reserves on this phone: correctness on the test loops and time for a long walk.",
-  "spike2.run": "Run the comparison",
-  "spike2.running": "Running {lib} …",
-  "spike2.result": "{passed}/{total} test loops correct · long walk ({n} points): {ms} ms",
 
   "species.squirrel": "Red squirrel",
   "species.roe_deer": "Roe deer",

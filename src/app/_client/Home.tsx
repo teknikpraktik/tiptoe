@@ -56,8 +56,6 @@ export function Home() {
         <div className="tests">
           <span className="muted">{t("home.tests")}</span>
           <Link className="btn small" href="/field">{t("home.field")}</Link>
-          <Link className="btn small" href="/spike/camera">{t("spike.title")}</Link>
-          <Link className="btn small" href="/spike/geometry">{t("spike2.title")}</Link>
         </div>
       </nav>
       {warn && (
