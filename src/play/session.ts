@@ -4,6 +4,9 @@ import { ratePhoto, type Rating } from "@/camera/rating";
 import type { Placement } from "@/camera/projection";
 import { MAX_PLAUSIBLE_SPEED_MPS } from "@/config/gps";
 import { newEngineState, WorldEngine, type Animal, type EngineEvent } from "@/engine/engine";
+import { hash32 } from "@/engine/hash";
+import { LevelIndex, levelForArea, toNextLevelM2, type Level } from "@/engine/levels";
+import { OBSERVATION, chooseResident, planObservation, residentCandidate, windowOf, type Resident } from "@/engine/world";
 import { scoreFrom, type ScoreSummary } from "@/engine/scoring";
 import { SPECIES, type SpeciesId, type Tempo } from "@/engine/species";
 import type { Environment } from "@/geo/environment";
@@ -62,6 +65,12 @@ export interface WalkView {
   reserves: Reserve[];
   totalAreaM2: number;
   lastClosure: ClosureView | null;
+  /** Kort meddelande till spelaren (inflyttning, ny nivå, observation). `id` ändras för varje nytt. */
+  notice: { id: number; key: NoticeKey; vars: Record<string, string | number> } | null;
+  /** Reservatet spelaren står i: nivå och vad som krävs för nästa (spec: kartan visar nivån och nästa mål). */
+  levelInfo: { level: Level; areaM2: number; toNextM2: number | null } | null;
+  /** Annonserade observationer (ungefärlig plats). */
+  sightings: { id: string; species: SpeciesId; lat: number; lon: number; untilMs: number }[];
   animals: AnimalView[];
   /** Närmaste djur inom fotoavstånd (inte på flykt), och om kameran får användas just nu. */
   photoTarget: { id: string; ready: boolean; why: null | "move" | "gps" } | null;
@@ -69,6 +78,11 @@ export interface WalkView {
   env: "none" | "loading" | "ok" | "missing";
   storage: "ok" | "none";
 }
+
+export type NoticeKey = "walk.movedIn" | "walk.levelUp" | "walk.levelSpecies" | "walk.observation";
+
+/** Väderstreck för en bäring (för observationer). */
+export const compassPoint = (deg: number): "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW" => (["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const)[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 
 export interface PhotoResult { stars: Rating["stars"]; rating: Rating; points: number; newSpecies: boolean; species: SpeciesId; photoId: string; observation: Observation | null }
 
@@ -104,13 +118,20 @@ export class WalkSession {
   private lock: { release(): Promise<void> } | null = null;
   private hidden = false;
   private closureSeq = 0;
+  private noticeSeq = 0;
+  private residents: Resident[] = [];
+  private notify(key: NoticeKey, vars: Record<string, string | number>) { this.set({ notice: { id: ++this.noticeSeq, key, vars } }); }
+  /** Profilens värld till motorn: nivåer ur reservaten och de inflyttade. */
+  private syncProfileWorld(reserves = this.view.reserves) {
+    this.engine?.setProfileWorld({ key: this.view.profile?.id ?? "p1", levels: new LevelIndex(reserves), residents: this.residents });
+  }
 
   constructor(private readonly d: SessionDeps) {
     this.nowFn = d.now ?? Date.now;
     this.provider = new GpsProvider(d.geo, () => this.now());
     this.view = {
       stage: "loading", profile: null, walk: null, pos: null, accuracyM: null, quality: "unavailable", headingDeg: null, tempo: "still", tempoSource: "gps", gpsError: null,
-      track: [], reserves: [], totalAreaM2: 0, lastClosure: null, animals: [], photoTarget: null, score: scoreFrom([]), env: "none", storage: d.repo ? "ok" : "none",
+      track: [], reserves: [], totalAreaM2: 0, lastClosure: null, notice: null, levelInfo: null, sightings: [], animals: [], photoTarget: null, score: scoreFrom([]), env: "none", storage: d.repo ? "ok" : "none",
     };
   }
 
@@ -133,8 +154,9 @@ export class WalkSession {
     const repo = this.d.repo;
     if (!repo) { this.set({ stage: "idle" }); return; }
     const profile = await repo.ensureProfile(lang, this.now());
-    const [reserves, observations, active] = await Promise.all([repo.reserves(profile.id), repo.observations(profile.id), repo.activeWalk(profile.id)]);
+    const [reserves, observations, active, residents] = await Promise.all([repo.reserves(profile.id), repo.observations(profile.id), repo.activeWalk(profile.id), repo.residents(profile.id)]);
     this.observations = observations;
+    this.residents = residents;
     const patch: Partial<WalkView> = { profile, reserves, totalAreaM2: totalAreaM2(reserves), score: scoreFrom(observations) };
     if (active) {
       this.track = await repo.track(profile.id, active.id);
@@ -142,7 +164,7 @@ export class WalkSession {
       const snap = await repo.snapshot(profile.id, active.id);
       const saved = await loadLog(repo.db, active.id).catch(() => undefined);
       this.fieldLog = saved ? FieldLog.fromData(saved) : new FieldLog(active.id, this.now(), this.d.build ?? "dev", this.d.userAgent, this.d.standalone);
-      if (snap) { this.addedThisWalkM2 = snap.addedThisWalkM2; this.engine = new WorldEngine(snap.engine, emptyEnv); }
+      if (snap) { this.addedThisWalkM2 = snap.addedThisWalkM2; this.engine = new WorldEngine(snap.engine, emptyEnv); this.syncProfileWorld(reserves); }
       this.set({ ...patch, stage: "paused", walk: active, track: this.track.map(ll) });
       this.log("restore", { walk: active.id, points: this.track.length, snapshot: !!snap });
       return;
@@ -166,6 +188,8 @@ export class WalkSession {
       this.log("walk_start", { walk: walk.id });
     } else this.log("walk_resume", { walk: walk.id });
     this.engine ??= new WorldEngine(newEngineState(this.now()), emptyEnv);
+    this.syncProfileWorld();
+    this.obsKm = Math.floor(this.engine.s.metersWalked / OBSERVATION.everyM);
     this.set({ stage: "walking", walk, track: this.track.map(ll) });
     this.startSensors(motion === "granted");
     void this.acquireWakeLock();
@@ -276,6 +300,10 @@ export class WalkSession {
     let events: EngineEvent[] = [];
     if (this.env) events = this.engine.step({ tMs, pos, tempo: tempo.tempo, posOk: pos !== null && this.view.quality !== "poor" && this.view.quality !== "unavailable" });
     for (const ev of events) this.log(`animal_${ev.type}`, ev as unknown as Record<string, unknown>);
+    if (pos && this.env) this.maybeObservation(pos, tMs);
+    const inRes = pos ? this.engine.levels.reserveAt(pos) : null;
+    const levelInfo = inRes ? { level: levelForArea(inRes.areaM2), areaM2: inRes.areaM2, toNextM2: toNextLevelM2(inRes.areaM2) } : null;
+    if (JSON.stringify(levelInfo) !== JSON.stringify(this.view.levelInfo)) this.set({ levelInfo });
     if (events.some((e) => e.type === "appear" || e.type === "flee")) this.saveLog();
     const animals: AnimalView[] = this.engine.visible(pos).map((a) => ({ id: a.id, species: a.species, lat: a.pos.lat, lon: a.pos.lon, state: a.state, headingDeg: a.headingDeg, distM: pos ? haversineM(pos, a.pos) : Infinity }));
     let photoTarget: WalkView["photoTarget"] = null;
@@ -297,9 +325,80 @@ export class WalkSession {
     this.set({ env: "loading" });
     try {
       const env = await this.d.loadEnv(center, ENV_RADIUS_M);
-      if (env) { this.env = env; this.envCenter = center; this.engine?.setEnvironment(env); this.set({ env: "ok" }); this.log("env_loaded", { objects: env.size }); }
+      if (env) {
+        this.env = env; this.envCenter = center; this.engine?.setEnvironment(env); this.set({ env: "ok" }); this.log("env_loaded", { objects: env.size });
+        const pc = this.pendingClosure;
+        this.pendingClosure = null;
+        if (pc) await this.afterClosure(pc.before, this.view.reserves, pc.pieces);
+      }
       else { this.envCenter = center; this.set({ env: "missing" }); this.log("env_missing"); }
     } finally { this.envLoading = false; }
+  }
+
+  private obsKm = 0;
+  /** Observationer: efter varje 1,5 km gången sträcka, med en chans (deterministisk), en sällsynt art annonseras i närheten. */
+  private maybeObservation(pos: LatLon, tMs: number) {
+    const km = Math.floor((this.engine?.s.metersWalked ?? 0) / OBSERVATION.everyM);
+    if (km <= this.obsKm || !this.engine || !this.env) return;
+    this.obsKm = km;
+    const c = planObservation(this.env, pos, this.view.profile?.id ?? "p1", tMs, km);
+    if (!c) return;
+    this.engine.addObservation(c, tMs + OBSERVATION.durationMs);
+    const dist = haversineM(pos, c.home);
+    this.set({ sightings: [...this.view.sightings.filter((x) => x.untilMs > tMs), { id: c.id, species: c.species, lat: c.home.lat, lon: c.home.lon, untilMs: tMs + OBSERVATION.durationMs }] });
+    this.notify("walk.observation", { species: c.species, dir: compassPoint(bearingDeg(pos, c.home)), m: Math.round(dist / 50) * 50 });
+    this.log("observation", { id: c.id, species: c.species, distM: Math.round(dist) });
+  }
+
+  /**
+   * Efter att en slinga slutits (spec: Direkt återkoppling och Reservatsnivåer): en individ flyttar in i den nya ytan med ett garanterat möte,
+   * och ett reservat som når nivå 2 eller 3 får en sällsynt respektive mycket sällsynt invånare om miljön passar.
+   */
+  private pendingClosure: { before: Reserve[]; after: Reserve[]; pieces: [number, number][][][] } | null = null;
+  private async afterClosure(before: Reserve[], after: Reserve[], pieces: [number, number][][][]) {
+    const env = this.env, p = this.view.profile, pos = this.view.pos;
+    // Terrängen är inte inläst än: inflyttningen görs när den är det.
+    if (!env) { this.pendingClosure = { before, after, pieces: [...(this.pendingClosure?.pieces ?? []), ...pieces] }; return; }
+    if (!p || !this.engine) return;
+    const t = this.now();
+    const levels = new LevelIndex(after);
+    const added: Resident[] = [];
+    const piece = [...pieces].sort((a, b) => areaOf(b) - areaOf(a))[0];
+    if (piece) {
+      const rings = piece.map((r) => r.map(([lon, lat]) => ({ lat, lon })));
+      const seed = hash32(p.id, "movein", this.closureSeq, Math.floor(t / 1000));
+      const probe = rings[0][0];
+      const pick = chooseResident(env, rings, seed, t, levels.levelAt(probe), undefined, pos ? { p: pos, m: 30 } : undefined);
+      if (pick) {
+        const res: Resident = { id: `m${seed.toString(36)}`, species: pick.species, ...(pick.variant ? { variant: pick.variant } : {}), home: pick.home, reserveId: levels.reserveAt(pick.home)?.id ?? "", since: t, reason: "moved_in" };
+        added.push(res);
+        this.residents = [...this.residents, res];
+        this.syncProfileWorld(after);
+        const ev = this.engine.forceAppear(residentCandidate(res, windowOf(t)), t, pos, "moved_in");
+        this.log("animal_appear", ev as unknown as Record<string, unknown>);
+        this.notify("walk.movedIn", { species: res.species });
+      }
+    }
+    // Nya nivåer: jämför varje reservat med den högsta nivån bland de reservat det består av.
+    const oldLevel = (id: string) => Math.max(0, ...before.filter((x) => x.id === id).map((x) => levelForArea(x.areaM2)));
+    for (const r of after) {
+      const was = oldLevel(r.id), now = levelForArea(r.areaM2);
+      if (now <= was) continue;
+      this.log("reserve_level", { id: r.id, from: was, to: now, areaM2: Math.round(r.areaM2) });
+      if (now < 2) { this.notify("walk.levelUp", { level: now }); continue; }
+      const rings = r.rings.map((ring) => ring.map(([lon, lat]) => ({ lat, lon })));
+      const pick = chooseResident(env, rings, hash32(p.id, "level", r.id, now), t, now, now === 3 ? ["very_rare"] : ["rare"]);
+      if (pick) {
+        const res: Resident = { id: `l${hash32(p.id, r.id, now).toString(36)}`, species: pick.species, home: pick.home, reserveId: r.id, since: t, reason: now === 3 ? "level3" : "level2" };
+        added.push(res);
+        this.residents = [...this.residents, res];
+        this.notify("walk.levelSpecies", { species: res.species, level: now });
+      } else this.notify("walk.levelUp", { level: now });
+    }
+    if (added.length) {
+      this.syncProfileWorld(after);
+      await this.d.repo?.saveResidents(p.id, this.residents);
+    }
   }
 
   private reserveBusy = false;
@@ -319,8 +418,11 @@ export class WalkSession {
       const w = this.view.walk;
       if (w) w.addedM2 = this.addedThisWalkM2;
       // Läget uppdateras innan något sparas, så att nästa beräkning alltid utgår från de nya reservaten.
+      const before = this.view.reserves;
+      this.syncProfileWorld(r.reserves);
       this.set({ reserves: r.reserves, totalAreaM2: totalAreaM2(r.reserves), lastClosure: { id: ++this.closureSeq, ha: r.addedM2 / 10_000, kind: r.grown.length ? "grew" : "new", pieces: r.newPieces, atMs: this.now() } });
       this.log("reserve_closed", { addedM2: Math.round(r.addedM2), created: r.created, grown: r.grown, merged: r.merged, ms, breaks: r.breaks.length });
+      await this.afterClosure(before, r.reserves, r.newPieces);
       this.saveLog();
       const p = this.view.profile;
       if (p) await this.d.repo?.replaceReserves(p.id, r.reserves);
@@ -381,6 +483,8 @@ export class WalkSession {
 }
 
 const ll = (p: TrackPoint): LatLon => ({ lat: p.lat, lon: p.lon });
+/** Ungefärlig yta (grader²) för att välja den största nya biten. */
+const areaOf = (rings: [number, number][][]) => { const r = rings[0] ?? []; let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += r[j][0] * r[i][1] - r[i][0] * r[j][1]; return Math.abs(a) / 2; };
 
 /** Miljö innan tiles har lästs in: allt är spärrat, så inga djur kan dyka upp. */
 const emptyEnv: Environment = { habitat: () => "open", blocked: () => true, segmentBlocked: () => true, hazard: () => true, walkableDistM: () => Infinity, waterDistM: () => Infinity, forestWithin: () => false, size: 0 };

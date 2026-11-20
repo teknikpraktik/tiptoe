@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SPECIES } from "@/engine/species";
+import { levelForArea } from "@/engine/levels";
+import { SPECIES, type SpeciesId } from "@/engine/species";
 import type { PhotoResult } from "@/play/session";
 import { CameraView, prepareCameraView, type CameraTarget, type ShotResult } from "../_client/CameraView";
 import { animalManifest, type AnimalManifest } from "../_client/animalImages";
@@ -14,6 +15,9 @@ import { shareOrDownload } from "../_client/share";
 
 const GameMap = dynamic(() => import("../_client/GameMap"), { ssr: false });
 
+
+/** Artnamn mitt i en mening ("Reservatet räcker nu för lodjur"): gemen begynnelsebokstav. Först i meningen: versal. */
+const sentenceName = (name: string, first: boolean) => (first ? name : name.charAt(0).toLocaleLowerCase("sv") + name.slice(1));
 
 const fmtHa = (m2: number) => (m2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1, minimumFractionDigits: m2 < 100_000 ? 1 : 0 });
 
@@ -64,6 +68,21 @@ export function Walk() {
 
   const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, label: t("walk.animalNear", { species: t(`species.${a.species}`), m: Math.round(a.distM) }) })), [v?.animals, t]);
   const reserves = useMemo(() => (v?.reserves ?? []).map((r) => r.rings), [v?.reserves]);
+  const reserveLevels = useMemo(() => (v?.reserves ?? []).map((r) => levelForArea(r.areaM2)), [v?.reserves]);
+  const sightings = useMemo(() => (v?.sightings ?? []).map((x) => ({ id: x.id, lat: x.lat, lon: x.lon, label: t(`species.${x.species}`) })), [v?.sightings, t]);
+  // Meddelanden från sessionen (inflyttning, ny nivå, observation).
+  const lastNotice = useRef<number | null>(null);
+  useEffect(() => {
+    const n = v?.notice;
+    if (!n || n.id === lastNotice.current) return;
+    lastNotice.current = n.id;
+    const vars: Record<string, string | number> = { ...n.vars };
+    if (typeof vars.species === "string") vars.species = sentenceName(t(`species.${vars.species as SpeciesId}`), t(n.key).startsWith("{species}"));
+    if (typeof vars.dir === "string") vars.dir = t(`dir.${vars.dir as "N"}`);
+    setToast(t(n.key, vars));
+    const h = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(h);
+  }, [v?.notice, t]);
   const closure = useMemo(() => (v?.lastClosure ? { id: v.lastClosure.id, pieces: v.lastClosure.pieces } : null), [v?.lastClosure]);
 
   if (!ctx || !v || v.stage === "loading") return <main className="mapshell"><div className="toast">{t("map.locating")}</div></main>;
@@ -86,7 +105,7 @@ export function Walk() {
 
   return (
     <main className="mapshell">
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} closure={closure} animals={animals} />
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} />
       <div className="statusbar" data-testid="status">
         <CloseButton href="/" />
         <span className={`gps q-${v.quality}`}>{t(`gps.quality.${v.quality}`)}{v.accuracyM != null && v.quality !== "unavailable" ? ` ${t("gps.accuracy", { m: Math.round(v.accuracyM) })}` : ""}</span>
@@ -99,6 +118,13 @@ export function Walk() {
       {v.stage === "walking" && v.env === "missing" && <div className="toast" role="alert">{t("walk.envMissing")}</div>}
       {v.storage === "none" && <div className="toast" role="alert">{t("walk.noStorage")}</div>}
       {toast && <div className="toast good" role="status" data-testid="reserve-toast">{toast}</div>}
+      {v.stage === "walking" && v.levelInfo && (
+        <div className="levelbar" data-testid="level">
+          <b>{t("walk.level", { level: v.levelInfo.level, ha: fmtHa(v.levelInfo.areaM2) })}</b>
+          {v.levelInfo.level > 0 && <span> · {t(`walk.levelHint.${v.levelInfo.level as 1 | 2 | 3}`)}</span>}
+          <span className="muted"> · {v.levelInfo.toNextM2 == null ? t("walk.levelMax") : t("walk.toNext", { ha: fmtHa(v.levelInfo.toNextM2), level: v.levelInfo.level + 1 })}</span>
+        </div>
+      )}
 
       <div className="controls">
         {v.stage === "idle" && <button className="btn primary" onClick={() => void s.start()} data-testid="start">{t("walk.start")}</button>}

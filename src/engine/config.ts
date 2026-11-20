@@ -9,6 +9,8 @@ export const WORLD = {
   windowMs: 2 * 60 * 60 * 1000,
   /** Möjliga individer per ruta och tidsfönster (taket per ruta och fönster). */
   candidatesPerCell: 3,
+  /** Extra möjliga individer per ruta och fönster inom profilens reservatszoner (reservatsdjur). */
+  reserveCandidatesPerCell: 3,
   /** Försök per individ att hitta en säker plats i rutan. */
   placeTries: 8,
 } as const;
