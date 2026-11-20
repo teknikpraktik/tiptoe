@@ -17,6 +17,10 @@ export function Home() {
         <Link className="btn primary" href="/walk">{t("home.startWalk")}</Link>
         <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.fieldbook")}</button>
         <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.settings")}</button>
+        <div className="tests">
+          <span className="muted">{t("home.tests")}</span>
+          <Link className="btn small" href="/spike/camera">{t("spike.title")}</Link>
+        </div>
       </nav>
     </main>
   );

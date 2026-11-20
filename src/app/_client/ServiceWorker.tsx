@@ -19,7 +19,10 @@ export function ServiceWorker() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
     let reloading = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloading) { reloading = true; location.reload(); } });
+    // Tiptoe: ladda bara om vid byte från en tidigare version. Vid första installationen tar workern kontroll (clients.claim) utan att
+    // något behöver laddas om; en omladdning där skulle t.ex. stänga en öppen kamera.
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
     navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(BUILD_ID)}`).then((r) => {
       reg.current = r;
       if (r.waiting && navigator.serviceWorker.controller) setWaiting(r.waiting);

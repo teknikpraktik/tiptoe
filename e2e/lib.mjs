@@ -31,7 +31,7 @@ export async function setup({ out, geolocation = START, init } = {}) {
     executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium",
     args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
   });
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, permissions: ["geolocation", "camera"], geolocation, locale: "sv-SE" });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, permissions: ["geolocation", "camera", "accelerometer", "gyroscope", "magnetometer"], geolocation, locale: "sv-SE" });
   await mockOpenFreeMap(ctx);
   if (init) await ctx.addInitScript(init);
   const page = await ctx.newPage();
