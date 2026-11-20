@@ -116,3 +116,102 @@ function polygonsOf(geom: Uint8Array, toLatLon: (x: number, y: number) => LatLon
   }
   return polys;
 }
+
+// ---------- Tiptoe: linjer och attribut (miljö, gångbara linjer, större vägar) ----------
+
+export type MvtValue = string | number | boolean;
+export interface MvtFeature {
+  layer: string;
+  /** 2 = linje, 3 = polygon (punkter läses inte). */
+  type: 2 | 3;
+  props: Record<string, MvtValue>;
+  /** Linje: en eller flera delar som lat/lon. Polygon: polygoner, var och en som ringar (första = yttre). */
+  lines?: LatLon[][];
+  polygons?: LatLon[][][];
+}
+
+/** Linjer och polygoner (med attribut) ur valda lager. Utökning för Tiptoe av Outbreaks polygonavkodare ovan. */
+export function decodeFeatures(pbf: Uint8Array, z: number, x: number, y: number, want: ReadonlySet<string>): MvtFeature[] {
+  const out: MvtFeature[] = [];
+  const tile = new Reader(pbf);
+  while (!tile.done) {
+    const key = tile.varint();
+    if (key >> 3 !== 3 || (key & 7) !== 2) { tile.skip(key & 7); continue; }
+    const layer = new Reader(tile.bytes());
+    let name = "", extent = 4096;
+    const feats: Uint8Array[] = [];
+    const keys: string[] = [];
+    const values: MvtValue[] = [];
+    while (!layer.done) {
+      const k = layer.varint();
+      const f = k >> 3, w = k & 7;
+      if (f === 1 && w === 2) name = utf8.decode(layer.bytes());
+      else if (f === 2 && w === 2) feats.push(layer.bytes());
+      else if (f === 3 && w === 2) keys.push(utf8.decode(layer.bytes()));
+      else if (f === 4 && w === 2) values.push(readValue(new Reader(layer.bytes())));
+      else if (f === 5 && w === 0) extent = layer.varint();
+      else layer.skip(w);
+    }
+    if (!want.has(name)) continue;
+    const n = 2 ** z;
+    const toLatLon = (px: number, py: number): LatLon => {
+      const lon = ((x + px / extent) / n) * 360 - 180;
+      const t = Math.PI * (1 - (2 * (y + py / extent)) / n);
+      return { lat: (Math.atan(Math.sinh(t)) * 180) / Math.PI, lon };
+    };
+    for (const fb of feats) {
+      const fr = new Reader(fb);
+      let type = 0, geom: Uint8Array | null = null, tags: number[] = [];
+      while (!fr.done) {
+        const k = fr.varint();
+        const f = k >> 3, w = k & 7;
+        if (f === 3 && w === 0) type = fr.varint();
+        else if (f === 4 && w === 2) geom = fr.bytes();
+        else if (f === 2 && w === 2) { const r = new Reader(fr.bytes()); tags = []; while (!r.done) tags.push(r.varint()); }
+        else fr.skip(w);
+      }
+      if ((type !== 2 && type !== 3) || !geom) continue;
+      const props: Record<string, MvtValue> = {};
+      for (let i = 0; i + 1 < tags.length; i += 2) props[keys[tags[i]]] = values[tags[i + 1]];
+      if (type === 3) out.push({ layer: name, type: 3, props, polygons: polygonsOf(geom, toLatLon) });
+      else out.push({ layer: name, type: 2, props, lines: linesOf(geom, toLatLon) });
+    }
+  }
+  return out;
+}
+
+function readValue(r: Reader): MvtValue {
+  let v: MvtValue = "";
+  while (!r.done) {
+    const k = r.varint();
+    const f = k >> 3, w = k & 7;
+    if (f === 1 && w === 2) v = utf8.decode(r.bytes());
+    else if (f === 2 && w === 5) { v = new DataView(r.buf.buffer, r.buf.byteOffset + r.pos, 4).getFloat32(0, true); r.pos += 4; }
+    else if (f === 3 && w === 1) { v = new DataView(r.buf.buffer, r.buf.byteOffset + r.pos, 8).getFloat64(0, true); r.pos += 8; }
+    else if ((f === 4 || f === 5) && w === 0) v = r.varint();
+    else if (f === 6 && w === 0) v = zigzag(r.varint());
+    else if (f === 7 && w === 0) v = r.varint() !== 0;
+    else r.skip(w);
+  }
+  return v;
+}
+
+function linesOf(geom: Uint8Array, toLatLon: (x: number, y: number) => LatLon): LatLon[][] {
+  const r = new Reader(geom);
+  const lines: LatLon[][] = [];
+  let cx = 0, cy = 0;
+  let cur: LatLon[] = [];
+  while (!r.done) {
+    const ci = r.varint();
+    const cmd = ci & 7, count = ci >> 3;
+    if (cmd === 1 || cmd === 2) {
+      for (let i = 0; i < count; i++) {
+        cx += zigzag(r.varint()); cy += zigzag(r.varint());
+        if (cmd === 1) { if (cur.length > 1) lines.push(cur); cur = []; }
+        cur.push(toLatLon(cx, cy));
+      }
+    }
+  }
+  if (cur.length > 1) lines.push(cur);
+  return lines;
+}
