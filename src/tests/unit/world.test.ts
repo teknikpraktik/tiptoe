@@ -153,9 +153,12 @@ describe("motorn: budget, upptäckt och flykt", () => {
     s.budget = -100; // inga andra djur
     let t = T0;
     const speed = tempo === "sneak" ? 0.6 : 1.3;
-    for (let d = 90; d >= 30; d -= speed) {
+    // En smygande spelare fryser när djuret förvarnar eller tittar (spec: Frys!); en gående bryr sig inte.
+    for (let d = 90; d >= 30;) {
       t += 1000;
-      e.step({ tMs: t, pos: simPoint(500, -500 - d), tempo, posOk: true });
+      const freeze = tempo === "sneak" && !!s.active[0].look;
+      if (!freeze) d -= speed;
+      e.step({ tMs: t, pos: simPoint(500, -500 - d), tempo: freeze ? "still" : tempo, posOk: true, tempoFromMotion: true });
       if (s.active[0].state === "flee" || s.active[0].state === "gone") return { fledAt: d, e, t };
     }
     // Framme: stå still och fotografera.

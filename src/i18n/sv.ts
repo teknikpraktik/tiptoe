@@ -201,6 +201,10 @@ export const sv = {
   "dir.W": "västerut",
   "dir.NW": "åt nordväst",
 
+  "walk.lookUp": "Titta upp – lyssna och spana efter djur",
+  "walk.freeze": "FRYS!",
+  "walk.freezeWarn": "Den lyfter huvudet …",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 } as const;

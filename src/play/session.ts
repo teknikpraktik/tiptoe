@@ -46,7 +46,7 @@ export interface SessionDeps {
   persist?: () => Promise<boolean>;
 }
 
-export interface AnimalView { id: string; species: SpeciesId; lat: number; lon: number; state: Animal["state"]; headingDeg: number; distM: number }
+export interface AnimalView { id: string; species: SpeciesId; lat: number; lon: number; state: Animal["state"]; headingDeg: number; distM: number; look?: "warn" | "look" }
 
 export interface ClosureView { id: number; ha: number; kind: "new" | "grew"; pieces: [number, number][][][]; atMs: number }
 
@@ -71,6 +71,10 @@ export interface WalkView {
   levelInfo: { level: Level; areaM2: number; toNextM2: number | null } | null;
   /** Annonserade observationer (ungefärlig plats). */
   sightings: { id: string; species: SpeciesId; lat: number; lon: number; untilMs: number }[];
+  /** Spår mot djur som ännu inte syns. */
+  trails: { id: string; points: LatLon[] }[];
+  /** Ett djur i närheten förvarnar eller tittar: spelaren ska frysa. */
+  freeze: "warn" | "look" | null;
   animals: AnimalView[];
   /** Närmaste djur inom fotoavstånd (inte på flykt), och om kameran får användas just nu. */
   photoTarget: { id: string; ready: boolean; why: null | "move" | "gps" } | null;
@@ -79,7 +83,10 @@ export interface WalkView {
   storage: "ok" | "none";
 }
 
-export type NoticeKey = "walk.movedIn" | "walk.levelUp" | "walk.levelSpecies" | "walk.observation";
+export type NoticeKey = "walk.movedIn" | "walk.levelUp" | "walk.levelSpecies" | "walk.observation" | "walk.lookUp";
+
+/** Påminnelse att titta upp (spec: Säkerhet för barn): efter så här länge i rörelse, högst så här ofta. */
+export const LOOK_UP = { afterMs: 120_000, everyMs: 300_000 } as const;
 
 /** Väderstreck för en bäring (för observationer). */
 export const compassPoint = (deg: number): "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW" => (["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const)[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
@@ -131,7 +138,7 @@ export class WalkSession {
     this.provider = new GpsProvider(d.geo, () => this.now());
     this.view = {
       stage: "loading", profile: null, walk: null, pos: null, accuracyM: null, quality: "unavailable", headingDeg: null, tempo: "still", tempoSource: "gps", gpsError: null,
-      track: [], reserves: [], totalAreaM2: 0, lastClosure: null, notice: null, levelInfo: null, sightings: [], animals: [], photoTarget: null, score: scoreFrom([]), env: "none", storage: d.repo ? "ok" : "none",
+      track: [], reserves: [], totalAreaM2: 0, lastClosure: null, notice: null, levelInfo: null, sightings: [], trails: [], freeze: null, animals: [], photoTarget: null, score: scoreFrom([]), env: "none", storage: d.repo ? "ok" : "none",
     };
   }
 
@@ -298,14 +305,16 @@ export class WalkSession {
     const tempo = currentTempo(this.steps, tMs, this.speed.speedAt(tMs));
     if (pos && (!this.envCenter || haversineM(pos, this.envCenter) > ENV_RELOAD_M)) void this.loadEnv(pos);
     let events: EngineEvent[] = [];
-    if (this.env) events = this.engine.step({ tMs, pos, tempo: tempo.tempo, posOk: pos !== null && this.view.quality !== "poor" && this.view.quality !== "unavailable" });
+    if (this.env) events = this.engine.step({ tMs, pos, tempo: tempo.tempo, tempoFromMotion: tempo.source === "motion", posOk: pos !== null && this.view.quality !== "poor" && this.view.quality !== "unavailable" });
+    this.lookUpReminder(tempo.tempo, tMs);
     for (const ev of events) this.log(`animal_${ev.type}`, ev as unknown as Record<string, unknown>);
     if (pos && this.env) this.maybeObservation(pos, tMs);
     const inRes = pos ? this.engine.levels.reserveAt(pos) : null;
     const levelInfo = inRes ? { level: levelForArea(inRes.areaM2), areaM2: inRes.areaM2, toNextM2: toNextLevelM2(inRes.areaM2) } : null;
     if (JSON.stringify(levelInfo) !== JSON.stringify(this.view.levelInfo)) this.set({ levelInfo });
     if (events.some((e) => e.type === "appear" || e.type === "flee")) this.saveLog();
-    const animals: AnimalView[] = this.engine.visible(pos).map((a) => ({ id: a.id, species: a.species, lat: a.pos.lat, lon: a.pos.lon, state: a.state, headingDeg: a.headingDeg, distM: pos ? haversineM(pos, a.pos) : Infinity }));
+    const animals: AnimalView[] = this.engine.visible(pos).map((a) => ({ id: a.id, species: a.species, lat: a.pos.lat, lon: a.pos.lon, state: a.state, headingDeg: a.headingDeg, distM: pos ? haversineM(pos, a.pos) : Infinity, ...(a.look ? { look: a.look.phase } : {}) }));
+    const freeze = animals.some((a) => a.look === "look") ? "look" : animals.some((a) => a.look === "warn") ? "warn" : null;
     let photoTarget: WalkView["photoTarget"] = null;
     for (const a of animals) {
       if (a.state === "flee" || a.state === "gone" || a.distM > SPECIES[a.species].photoM) continue;
@@ -314,7 +323,7 @@ export class WalkSession {
         photoTarget = { id: a.id, ready, why: ready ? null : tempo.tempo !== "still" ? "move" : "gps" };
       }
     }
-    this.set({ tempo: tempo.tempo, tempoSource: tempo.source, animals, photoTarget });
+    this.set({ tempo: tempo.tempo, tempoSource: tempo.source, animals, photoTarget, freeze, trails: this.engine.trails(pos) });
     if (this.trackDirtySince && tMs - this.lastReserveMs >= RESERVE_EVERY_MS) void this.recomputeReserves();
     if (tMs - this.lastSnapMs >= SNAPSHOT_EVERY_MS) void this.saveSnapshot();
   }
@@ -333,6 +342,20 @@ export class WalkSession {
       }
       else { this.envCenter = center; this.set({ env: "missing" }); this.log("env_missing"); }
     } finally { this.envLoading = false; }
+  }
+
+  private movingSince: number | null = null;
+  private lastLookUp = -Infinity;
+  /** Titta upp: efter 2 minuter i gång- eller springtempo (med appen öppen), högst var 5:e minut. */
+  private lookUpReminder(tempo: Tempo, t: number) {
+    if (tempo !== "walk" && tempo !== "run") { this.movingSince = null; return; }
+    this.movingSince ??= t;
+    if (t - this.movingSince >= LOOK_UP.afterMs && t - this.lastLookUp >= LOOK_UP.everyMs) {
+      this.lastLookUp = t;
+      this.movingSince = t;
+      this.notify("walk.lookUp", {});
+      this.log("look_up");
+    }
   }
 
   private obsKm = 0;

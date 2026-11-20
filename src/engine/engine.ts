@@ -16,7 +16,8 @@ export type AppearVia = "base" | "reserve" | "resident" | "observation" | "moved
 /** Hur länge (ms) en fågel syns lyfta innan den är borta. */
 const FLY_MS = 1500;
 
-export type AnimalState = "rest" | "graze" | "wander" | "alert" | "flee" | "gone";
+/** look = frys-momentet: djuret har lyft huvudet och tittar (spec: Frys!). */
+export type AnimalState = "rest" | "graze" | "wander" | "alert" | "look" | "flee" | "gone";
 /** fled = sprang iväg, dove = dök undan i vattnet, flew = lyfte, left = gick sin väg, far = för långt bort. */
 export type GoneReason = "fled" | "dove" | "flew" | "left" | "far";
 
@@ -40,6 +41,12 @@ export interface Animal {
   flee?: { target: LatLon; leftM: number; kind: "run" | "dive" | "fly"; untilMs?: number };
   goneAtMs?: number;
   goneReason?: GoneReason;
+  /** Frys-momentet: förvarning (warn) eller blick (look) till `untilMs`; nästa blick tidigast `nextMs`. */
+  look?: { phase: "warn" | "look"; untilMs: number };
+  nextLookMs?: number;
+  looks?: number;
+  /** Spår som leder mot djuret från spelarens håll (spec: spår på kartan). */
+  trail?: LatLon[];
 }
 
 export interface EngineState {
@@ -61,6 +68,9 @@ export type EngineEvent =
   | { type: "appear"; id: string; species: SpeciesId; distM: number; habitat: Habitat; tMs: number; via: AppearVia }
   | { type: "alert"; id: string; tMs: number }
   | { type: "calm"; id: string; tMs: number }
+  | { type: "look_warn"; id: string; tMs: number }
+  | { type: "look"; id: string; tMs: number }
+  | { type: "look_end"; id: string; tMs: number }
   | { type: "flee"; id: string; distM: number; tempo: Tempo; tMs: number }
   | { type: "gone"; id: string; reason: GoneReason; tMs: number };
 
@@ -71,6 +81,8 @@ export interface StepInput {
   tempo: Tempo;
   /** Position som duger för spelet (GPS-kvalitet bättre än "poor"). */
   posOk: boolean;
+  /** Tempot kommer från rörelsesensorn (snabbt). Från GPS-fart (utjämnad över sekunder) tolereras smygande under frys-momentet. */
+  tempoFromMotion?: boolean;
 }
 
 export function newEngineState(tMs: number): EngineState {
@@ -197,7 +209,9 @@ export class WorldEngine {
     this.s.used[c.id] = c.window;
     this.s.encounters++;
     if (via === "observation") this.s.observations = (this.s.observations ?? []).filter((o) => o.c.id !== c.id);
-    this.s.active.push(this.animalFrom(c, pose, tMs));
+    const animal = this.animalFrom(c, pose, tMs);
+    animal.trail = this.makeTrail(animal, player);
+    this.s.active.push(animal);
     ev.push({ type: "appear", id: c.id, species: c.species, distM: Math.round(d), habitat: this.env.habitat(player), tMs, via });
   }
 
@@ -231,6 +245,9 @@ export class WorldEngine {
       if (player && input.posOk && d < R) a.alarm += BEHAVIOR.alarmRate * (1 - d / R) * BEHAVIOR.tempoAlarm[input.tempo] * (0.5 + sp.skittish) * dt;
       else a.alarm = Math.max(0, a.alarm - BEHAVIOR.alarmDecay * dt);
       if (a.alarm >= 1 && player) { this.startFlee(a, player, t, input.tempo, d, ev); continue; }
+      // Frys-momentet: rör sig spelaren medan djuret tittar, flyr det.
+      if (player && input.posOk && this.freeze(a, t, d, input, ev)) { this.startFlee(a, player, t, input.tempo, d, ev); continue; }
+      if (a.look?.phase === "look") { a.state = "look"; const v = toLocal(a.pos, player!); a.headingDeg = ((Math.atan2(v.x, v.y) * 180) / Math.PI + 360) % 360; continue; }
       if (a.alarm >= BEHAVIOR.alertAt) {
         if (a.state !== "alert") { a.state = "alert"; a.disturbed = true; ev.push({ type: "alert", id: a.id, tMs: t }); }
         if (player) { const v = toLocal(a.pos, player); a.headingDeg = ((Math.atan2(v.x, v.y) * 180) / Math.PI + 360) % 360; }
@@ -246,10 +263,67 @@ export class WorldEngine {
     }
   }
 
+  /** Sköter frys-momentets cykel. Returnerar true om djuret ska fly (spelaren rörde sig under blicken). */
+  private freeze(a: Animal, t: number, d: number, input: StepInput, ev: EngineEvent[]): boolean {
+    const sp = SPECIES[a.species];
+    const F = BEHAVIOR.freeze;
+    const aware = d <= sp.detectionM * F.awareFactor;
+    if (!aware) { if (a.look) { a.look = undefined; ev.push({ type: "look_end", id: a.id, tMs: t }); } return false; }
+    const r = { rngState: hash32(a.seed, "look", a.looks ?? 0) };
+    const [e0, e1] = F.everyS[sp.rarity];
+    if (a.nextLookMs === undefined) a.nextLookMs = t + (e0 + (e1 - e0) * rand(r)) * 1000;
+    if (!a.look) {
+      if (t < a.nextLookMs) return false;
+      a.look = { phase: "warn", untilMs: t + F.warnMs };
+      ev.push({ type: "look_warn", id: a.id, tMs: t });
+      return false;
+    }
+    if (a.look.phase === "warn") {
+      if (t < a.look.untilMs) return false;
+      const [l0, l1] = F.lookS[sp.rarity];
+      a.look = { phase: "look", untilMs: t + (l0 + (l1 - l0) * rand(r)) * 1000 };
+      ev.push({ type: "look", id: a.id, tMs: t });
+    }
+    if (t >= a.look.untilMs) {
+      a.look = undefined;
+      a.looks = (a.looks ?? 0) + 1;
+      a.nextLookMs = t + (e0 + (e1 - e0) * rand({ rngState: hash32(a.seed, "next", a.looks) })) * 1000;
+      if (a.state === "look") a.state = "graze";
+      ev.push({ type: "look_end", id: a.id, tMs: t });
+      return false;
+    }
+    const moving = input.tempo === "walk" || input.tempo === "run" || (input.tempo === "sneak" && input.tempoFromMotion !== false);
+    return moving;
+  }
+
+  /** Spår från spelarens håll mot djuret: 70–110 m långt, slutar 15 m före djuret, bara över säker mark. Deterministiskt ur individen. */
+  private makeTrail(a: Animal, player: LatLon): LatLon[] {
+    const r = { rngState: hash32(a.seed, "trail") };
+    const toward = toLocal(a.pos, player);
+    const base = Math.atan2(toward.x, toward.y) + (rand(r) - 0.5) * (80 * Math.PI) / 180;
+    const len = 70 + 40 * rand(r);
+    const pts: LatLon[] = [];
+    for (let m = 15; m <= len; m += 8) {
+      const wob = Math.sin(m / 9 + rand(r)) * 3;
+      const p = fromLocal(a.pos, { x: Math.sin(base) * m + Math.cos(base) * wob, y: Math.cos(base) * m - Math.sin(base) * wob });
+      if (this.env.blocked(p) || this.env.hazard(p)) break;
+      pts.push(p);
+    }
+    return pts.reverse();
+  }
+
+  /** Spår för djur som finns men inte syns än (längre bort än synavståndet). */
+  trails(player: LatLon | null): { id: string; points: LatLon[] }[] {
+    if (!player) return [];
+    return this.s.active.filter((a) => a.state !== "gone" && a.state !== "flee" && a.trail?.length).map((a) => ({ a, d: haversineM(a.pos, player) }))
+      .filter((x) => x.d > BEHAVIOR.visibleM && x.d <= BEHAVIOR.trailM).map((x) => ({ id: x.a.id, points: x.a.trail! }));
+  }
+
   private startFlee(a: Animal, player: LatLon, t: number, tempo: Tempo, d: number, ev: EngineEvent[]): void {
     const sp = SPECIES[a.species];
     a.state = "flee";
     a.disturbed = true;
+    a.look = undefined;
     ev.push({ type: "flee", id: a.id, distM: Math.round(d), tempo, tMs: t });
     if (sp.escape === "fly") {
       // Lyftet är en animation i gränssnittet, ingen rörelse över vatten eller land.

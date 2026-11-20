@@ -200,6 +200,10 @@ export const en: Record<MessageKey, string> = {
   "dir.W": "west",
   "dir.NW": "northwest",
 
+  "walk.lookUp": "Look up – listen and watch for animals",
+  "walk.freeze": "FREEZE!",
+  "walk.freezeWarn": "It's lifting its head …",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 };

@@ -52,6 +52,16 @@ export const BEHAVIOR = {
   /** Tomgång: längd på ett moment (s) och hur långt en vandring går (m). */
   idleLegS: [15, 60] as [number, number],
   wanderM: [5, 25] as [number, number],
-  /** Hur långt bort (m) ett djur visas på kartan. */
-  visibleM: 200,
+  /** Hur långt bort (m) ett djur syns på kartan. Längre bort syns bara spåren (spec: Hör och upptäck – spår kan leda mot ett djur). */
+  visibleM: 130,
+  /** Spåren syns inom detta avstånd till djuret. */
+  trailM: 260,
+  /** Frys-moment (spec: artspecifikt, 1–3 s blick, med förvarning). Förvarningen är lång nog för att stegräknaren ska hinna se att man stannat. */
+  freeze: {
+    warnMs: 2000,
+    everyS: { common: [14, 30], uncommon: [11, 24], rare: [8, 18], very_rare: [8, 16] } as Record<string, [number, number]>,
+    lookS: { common: [1, 2], uncommon: [1.5, 2.5], rare: [2, 3], very_rare: [2, 3] } as Record<string, [number, number]>,
+    /** Djuret bryr sig bara om spelaren inom upptäcktsradien (gångtempo) × detta. */
+    awareFactor: 1.4,
+  },
 } as const;

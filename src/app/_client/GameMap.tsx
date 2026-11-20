@@ -29,7 +29,7 @@ function circle(c: LatLon, rM: number): GeoJSON.Feature {
 const ARROW_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#f4e9cf" stroke="#2b2f27" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
 const DOT_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7.5" fill="#f4e9cf" stroke="#2b2f27" stroke-width="3"/></svg>`;
 
-export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string; escape?: string }
+export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string; escape?: string; look?: string }
 
 export interface GameMapProps {
   player?: LatLon | null;
@@ -47,6 +47,8 @@ export interface GameMapProps {
   /** Reservat som GeoJSON-ringar [lon, lat], med nivå (färgen blir varmare med nivån). */
   reserves?: [number, number][][][];
   reserveLevels?: number[];
+  /** Spår mot djur som inte syns än (prickar). */
+  trails?: { id: string; points: LatLon[] }[];
   /** Observationer: ungefärlig plats och etikett. */
   sightings?: { id: string; lat: number; lon: number; label: string }[];
   /** Nyss tillagd yta (växer fram); byt `id` för att spela animationen igen. */
@@ -104,6 +106,8 @@ export default function GameMap(props: GameMapProps) {
       map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#f6e39c", "#c8e39b"], "line-width": ["match", ["get", "level"], 3, 3, 2, 2.5, 2], "line-opacity": 0.85 } });
       map.addSource("closure", { type: "geojson", data: fc() });
       map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#f2d36b", "fill-opacity": 0 } });
+      map.addSource("trails", { type: "geojson", data: fc() });
+      map.addLayer({ id: "trails", type: "circle", source: "trails", paint: { "circle-radius": 2.6, "circle-color": "#e9d3a6", "circle-opacity": ["get", "o"], "circle-stroke-color": "#2b2f27", "circle-stroke-width": 0.8 } });
       map.addSource("track", { type: "geojson", data: fc() });
       map.addLayer({ id: "track", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#f2b35b", "line-width": 3, "line-opacity": 0.85 } });
       setLoaded(true);
@@ -131,6 +135,11 @@ export default function GameMap(props: GameMapProps) {
   useEffect(() => { if (loaded) src("track", fc(track && track.length > 1 ? [line(track)] : [])); }, [loaded, track]);
   const polys = (rs: [number, number][][][], levels?: number[]): GeoJSON.Feature[] => rs.map((rings, i) => ({ type: "Feature", properties: { level: levels?.[i] ?? 0 }, geometry: { type: "Polygon", coordinates: rings.map((r) => [...r, r[0]]) } }));
   useEffect(() => { if (loaded) src("reserves", fc(polys(reserves ?? [], props.reserveLevels))); }, [loaded, reserves, props.reserveLevels]);
+  useEffect(() => {
+    if (!loaded) return;
+    // Prickarna tonar fram mot djuret (spåren blir färskare).
+    src("trails", fc((props.trails ?? []).flatMap((tr) => tr.points.map((p, i) => ({ type: "Feature", properties: { o: 0.35 + (0.55 * (i + 1)) / tr.points.length }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }) as GeoJSON.Feature))));
+  }, [loaded, props.trails]);
   // Observationer: en pulserande ring där arten sågs (ungefärligt).
   const sightingMarkers = useRef(new Map<string, Marker>());
   useEffect(() => {
@@ -189,6 +198,7 @@ export default function GameMap(props: GameMapProps) {
       x.el.dataset.state = a.state;
       x.el.dataset.rarity = a.rarity;
       x.el.dataset.escape = a.escape ?? "run";
+      if (a.look) x.el.dataset.look = a.look; else delete x.el.dataset.look;
       x.el.setAttribute("aria-label", a.label);
     }
     for (const [id, x] of animalMarkers.current) if (!live.has(id)) { x.m.remove(); animalMarkers.current.delete(id); }
