@@ -1,0 +1,8 @@
+node_modules
+.next
+out
+*.tsbuildinfo
+next-env.d.ts
+public/maplibre
+public/version.json
+e2e/out*

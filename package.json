@@ -1,0 +1,40 @@
+{
+  "name": "tiptoe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tiptoe – Wild Encounters (GPS-baserat smyg- och fotospel)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "node scripts/copy-maplibre-worker.mjs",
+    "predev": "node scripts/stamp-build.mjs",
+    "prebuild": "node scripts/stamp-build.mjs",
+    "serve": "node scripts/serve-out.mjs",
+    "e2e": "node e2e/run-all.mjs"
+  },
+  "dependencies": {
+    "maplibre-gl": "6.14.0",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/geojson": "7946.0.16",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "fake-indexeddb": "6.2.6",
+    "playwright-core": "1.64.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
