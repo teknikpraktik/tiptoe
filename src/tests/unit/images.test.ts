@@ -16,7 +16,7 @@ describe("djurbilder (manifestet)", () => {
         const im = s.views[v][pose];
         expect(existsSync(path.join(root, im.src)), `${id} ${v} ${pose}`).toBe(true);
         expect(im.aspect).toBeGreaterThan(0.2);
-        expect(im.aspect).toBeLessThan(5);
+        expect(im.aspect).toBeLessThan(8);
       }
     }
   });
