@@ -76,6 +76,12 @@ export const sv = {
   "spike.copied": "Kopierat",
   "home.tests": "Test (fas 1)",
 
+  "spike2.title": "Geometritest (spik 2)",
+  "spike2.intro": "Jämför polygonbiblioteken för reservat på den här telefonen: korrekthet på testslingorna och tid för en lång promenad.",
+  "spike2.run": "Kör jämförelsen",
+  "spike2.running": "Kör {lib} …",
+  "spike2.result": "{passed}/{total} testslingor rätt · lång promenad ({n} punkter): {ms} ms",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 } as const;
