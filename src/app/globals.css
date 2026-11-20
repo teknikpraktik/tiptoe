@@ -100,3 +100,21 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .shutter { width: 76px; height: 76px; border-radius: 50%; border: 5px solid var(--ink); background: #ffffff33; cursor: pointer; }
 .shutter:active { background: #ffffff88; }
 .shutter:disabled { opacity: 0.35; }
+
+/* Djur på kartan: diskreta markörer (spec: inte tecknade figurer). */
+.amark { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; }
+.amark .adot { width: 14px; height: 14px; border-radius: 50%; background: #e9d3a6; border: 2px solid #2b2f27; box-shadow: 0 0 0 4px #e9d3a633; transition: transform .3s, opacity .6s, background .3s; }
+.amark[data-rarity=uncommon] .adot { background: #9fd0e6; box-shadow: 0 0 0 4px #9fd0e655; }
+.amark[data-state=alert] .adot { background: var(--warn); animation: apulse 1s infinite; }
+.amark[data-state=flee] .adot { opacity: .45; transform: scale(.7); }
+.amark[data-state=gone] .adot { opacity: 0; }
+@keyframes apulse { 50% { box-shadow: 0 0 0 9px #e6b34a33; } }
+.center { text-align: center; }
+.toast.good { background: #3f5a2be6; }
+.toast.subtle { opacity: .8; font-size: 14px; }
+.tempo.t-still { color: var(--good); } .tempo.t-sneak { color: var(--ink); } .tempo.t-walk { color: var(--muted); } .tempo.t-run { color: var(--warn); }
+.btn.camera { min-height: 56px; font-size: 17px; }
+.modal .photo { width: 100%; max-height: 48vh; object-fit: contain; background: #000; border-radius: 10px; display: block; margin-bottom: 10px; }
+.result-line { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.stars { color: var(--accent); font-size: 26px; letter-spacing: 2px; }
+.chip.good { color: var(--good); }

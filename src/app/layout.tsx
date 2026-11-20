@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LangProvider } from "./_client/i18n";
 import { ServiceWorker } from "./_client/ServiceWorker";
+import { SessionProvider } from "./_client/SessionProvider";
 
 export const metadata: Metadata = {
   title: "Tiptoe – Wild Encounters",
@@ -25,8 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="sv">
       <body>
         <LangProvider>
-          {children}
-          <ServiceWorker />
+          <SessionProvider>
+            {children}
+            <ServiceWorker />
+          </SessionProvider>
         </LangProvider>
       </body>
     </html>
