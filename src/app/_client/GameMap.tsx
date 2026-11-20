@@ -1,6 +1,7 @@
 // Origin: teknikpraktik/solosurvival@033a121 src/app/_client/GameMap.tsx
-// Kategori B: kartinitieringen, track-up-kameran, DOM-markören, den enda requestAnimationFrame-loopen och pausen vid visibilitychange är
-// kvar. Lagren net, routes och zone, zombier, mål och kantpilar är borttagna; spår, reservat och djur läggs till i Tiptoe.
+// Kategori B: kartinitieringen, track-up-kameran, DOM-markörerna, den enda requestAnimationFrame-loopen och pausen vid visibilitychange är
+// kvar. Lagren net, routes och zone, zombier, mål och kantpilar är borttagna; spår, reservat och djur är nya. Djurens mjuka rörelse mellan
+// motorns steg ersätter Outbreaks zombie-anim.ts (fri 2D i stället för längs en graf).
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -28,6 +29,8 @@ function circle(c: LatLon, rM: number): GeoJSON.Feature {
 const ARROW_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#f4e9cf" stroke="#2b2f27" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
 const DOT_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7.5" fill="#f4e9cf" stroke="#2b2f27" stroke-width="3"/></svg>`;
 
+export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string }
+
 export interface GameMapProps {
   player?: LatLon | null;
   accuracyM?: number | null;
@@ -41,6 +44,13 @@ export interface GameMapProps {
   onUserMove?: () => void;
   /** Spelarens eget spår under promenaden. */
   track?: LatLon[];
+  /** Reservat som GeoJSON-ringar [lon, lat]. */
+  reserves?: [number, number][][][];
+  /** Nyss tillagd yta (växer fram); byt `id` för att spela animationen igen. */
+  closure?: { id: number; pieces: [number, number][][][] } | null;
+  /** Synliga djur (motorns positioner; kartan glider mellan dem). */
+  animals?: MapAnimal[];
+  onAnimalTap?: (id: string) => void;
   zoom?: number;
   scale?: boolean;
   onError?: (what: string) => void;
@@ -86,6 +96,11 @@ export default function GameMap(props: GameMapProps) {
     map.on("load", () => {
       map.addSource("acc", { type: "geojson", data: fc() });
       map.addLayer({ id: "acc", type: "fill", source: "acc", paint: { "fill-color": "#f4e9cf", "fill-opacity": 0.12 } });
+      map.addSource("reserves", { type: "geojson", data: fc() });
+      map.addLayer({ id: "reserves", type: "fill", source: "reserves", paint: { "fill-color": "#9cc56b", "fill-opacity": 0.22 } });
+      map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": "#c8e39b", "line-width": 2, "line-opacity": 0.8 } });
+      map.addSource("closure", { type: "geojson", data: fc() });
+      map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#f2d36b", "fill-opacity": 0 } });
       map.addSource("track", { type: "geojson", data: fc() });
       map.addLayer({ id: "track", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#f2b35b", "line-width": 3, "line-opacity": 0.85 } });
       setLoaded(true);
@@ -108,9 +123,56 @@ export default function GameMap(props: GameMapProps) {
   }, []);
 
   const src = (id: string, data: GeoJSON.FeatureCollection) => (mapRef.current?.getSource(id) as GeoJSONSource | undefined)?.setData(data);
-  const { player, accuracyM, follow, track } = props;
+  const { player, accuracyM, follow, track, reserves, closure } = props;
 
   useEffect(() => { if (loaded) src("track", fc(track && track.length > 1 ? [line(track)] : [])); }, [loaded, track]);
+  const polys = (rs: [number, number][][][]): GeoJSON.Feature[] => rs.map((rings) => ({ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: rings.map((r) => [...r, r[0]]) } }));
+  useEffect(() => { if (loaded) src("reserves", fc(polys(reserves ?? []))); }, [loaded, reserves]);
+  // Ytan växer fram: en gul fyllning som tonar in och sedan ut över reservatet (spec: Direkt återkoppling).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!loaded || !map || !closure) return;
+    src("closure", fc(polys(closure.pieces)));
+    let raf = 0;
+    const t0 = performance.now();
+    const anim = (now: number) => {
+      const k = (now - t0) / 2600;
+      if (k >= 1) { map.setPaintProperty("closure", "fill-opacity", 0); return; }
+      map.setPaintProperty("closure", "fill-opacity", Math.sin(Math.min(1, k) * Math.PI) * 0.55);
+      raf = requestAnimationFrame(anim);
+    };
+    raf = requestAnimationFrame(anim);
+    return () => cancelAnimationFrame(raf);
+  }, [loaded, closure?.id]);
+
+  // --- Djur: DOM-markörer; positionen glider mot motorns i bildrutesloopen nedan. ---
+  const animalMarkers = useRef(new Map<string, { m: Marker; el: HTMLDivElement; at: LatLon; target: LatLon }>());
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!loaded || !map) return;
+    const live = new Set<string>();
+    for (const a of props.animals ?? []) {
+      live.add(a.id);
+      let x = animalMarkers.current.get(a.id);
+      if (!x) {
+        const el = document.createElement("div");
+        el.className = "amark";
+        el.setAttribute("role", "button");
+        el.setAttribute("data-testid", "animal");
+        el.dataset.id = a.id;
+        el.innerHTML = `<span class="adot"></span>`;
+        el.addEventListener("click", (e) => { e.stopPropagation(); propsRef.current.onAnimalTap?.(a.id); });
+        x = { m: new Marker({ element: el }).setLngLat([a.lon, a.lat]).addTo(map), el, at: { lat: a.lat, lon: a.lon }, target: { lat: a.lat, lon: a.lon } };
+        animalMarkers.current.set(a.id, x);
+      }
+      x.target = { lat: a.lat, lon: a.lon };
+      x.el.dataset.state = a.state;
+      x.el.dataset.rarity = a.rarity;
+      x.el.setAttribute("aria-label", a.label);
+    }
+    for (const [id, x] of animalMarkers.current) if (!live.has(id)) { x.m.remove(); animalMarkers.current.delete(id); }
+  }, [loaded, props.animals]);
+  useEffect(() => () => { animalMarkers.current.forEach((x) => x.m.remove()); animalMarkers.current.clear(); }, []);
 
   // --- Spelarmarkör ---
   const playerEl = useRef<HTMLDivElement | null>(null);
@@ -166,6 +228,13 @@ export default function GameMap(props: GameMapProps) {
         at.lon += (target.lon - at.lon) * k;
         playerMarker.current?.setLngLat([at.lon, at.lat]);
         moved = true;
+      }
+      for (const x of animalMarkers.current.values()) {
+        if (Math.abs(x.target.lat - x.at.lat) < 2e-8 && Math.abs(x.target.lon - x.at.lon) < 4e-8) continue;
+        const k = 1 - Math.exp(-dt / 0.6);
+        x.at.lat += (x.target.lat - x.at.lat) * k;
+        x.at.lon += (x.target.lon - x.at.lon) * k;
+        x.m.setLngLat([x.at.lon, x.at.lat]);
       }
       const h = P.getHeading ? P.getHeading() : P.heading ?? null;
       let turned = false;

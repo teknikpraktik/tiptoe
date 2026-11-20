@@ -1,11 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { PHASE1_SPECIES } from "@/engine/species";
 import { useT } from "./i18n";
+import { useSession, useWalkView } from "./SessionProvider";
 
 /** Startskärmen: namnet, Starta promenad och (senare) fältdagbok och inställningar. Minimal text. */
 export function Home() {
   const t = useT();
+  const router = useRouter();
+  const ctx = useSession();
+  const v = useWalkView();
+  const start = async () => {
+    // Promenaden startas i klicket (iOS: rörelsesensorn kräver en användargest), sedan kartan.
+    if (ctx && v?.stage === "idle") await ctx.session.start();
+    router.push("/walk");
+  };
+  const going = v?.stage === "walking" || v?.stage === "paused";
   return (
     <main className="home">
       <header className="homehead">
@@ -14,7 +26,10 @@ export function Home() {
         <p className="tagline">{t("app.tagline")}</p>
       </header>
       <nav className="homenav">
-        <Link className="btn primary" href="/walk">{t("home.startWalk")}</Link>
+        {v && v.storage === "ok" && (
+          <p className="muted center" data-testid="stats">{t("home.stats", { points: v.score.total, species: v.score.species.length, total: PHASE1_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
+        )}
+        <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{going ? t("walk.resume") : t("home.startWalk")}</button>
         <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.fieldbook")}</button>
         <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.settings")}</button>
         <div className="tests">

@@ -5,10 +5,11 @@ const OUT = process.env.E2E_OUT ?? "e2e/out/start";
 const { base, ctx, page, check, done } = await setup({ out: OUT });
 try {
   await page.goto(base + "/");
-  await page.getByRole("link", { name: "Starta promenad" }).waitFor({ timeout: 10000 });
-  check("startsidan visar Starta promenad", true);
+  await page.getByTestId("home-start").waitFor({ timeout: 10000 });
+  await page.waitForFunction(() => !document.querySelector('[data-testid="home-start"]')?.hasAttribute("disabled"), null, { timeout: 10000 });
+  check("startsidan visar Starta promenad", (await page.getByTestId("home-start").innerText()).includes("Starta promenad"));
   await page.screenshot({ path: `${OUT}/01-start.png` });
-  await page.getByRole("link", { name: "Starta promenad" }).click();
+  await page.getByTestId("home-start").click();
   await page.waitForURL("**/walk/");
   await page.waitForSelector('[data-testid="map"][data-loaded="true"]', { timeout: 20000 });
   check("kartan laddas", true);
