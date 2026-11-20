@@ -6,7 +6,12 @@ import { rand } from "./core/rng";
 import { BEHAVIOR, SPAWN } from "./config";
 import { hash32 } from "./hash";
 import { SPECIES, TEMPO_FACTOR, WATER_ZONE, type SpeciesId, type Tempo } from "./species";
-import { candidates, cellsAround, idlePose, windowOf, type Candidate, type Cell } from "./world";
+import { candidates, cellsAround, idlePose, reserveCandidates, residentCandidate, windowOf, type Candidate, type Cell, type Resident } from "./world";
+import { LevelIndex } from "./levels";
+
+/** Profilens del av världen: reservatsnivåer och inflyttade djur (spec: per profil). */
+export interface ProfileWorld { key: string; levels: LevelIndex; residents: Resident[] }
+export type AppearVia = "base" | "reserve" | "resident" | "observation" | "moved_in";
 
 /** Hur länge (ms) en fågel syns lyfta innan den är borta. */
 const FLY_MS = 1500;
@@ -48,10 +53,12 @@ export interface EngineState {
   /** Individer som redan dykt upp för den här profilen (id → fönster), så att de inte dyker upp igen i samma fönster. */
   used: Record<string, number>;
   encounters: number;
+  /** Aktuella observationer (spec: sällsynt observation i närheten): kan aktiveras som vanliga kandidater tills de går ut. */
+  observations?: { c: Candidate; untilMs: number }[];
 }
 
 export type EngineEvent =
-  | { type: "appear"; id: string; species: SpeciesId; distM: number; habitat: Habitat; tMs: number }
+  | { type: "appear"; id: string; species: SpeciesId; distM: number; habitat: Habitat; tMs: number; via: AppearVia }
   | { type: "alert"; id: string; tMs: number }
   | { type: "calm"; id: string; tMs: number }
   | { type: "flee"; id: string; distM: number; tempo: Tempo; tMs: number }
@@ -79,7 +86,28 @@ export const metersPerEncounter = (h: Habitat) => (NATURE.includes(h) ? SPAWN.me
  */
 export class WorldEngine {
   private candCache = new Map<string, Candidate[]>();
-  constructor(public s: EngineState, private env: Environment) {}
+  private profile: ProfileWorld = { key: "", levels: new LevelIndex([]), residents: [] };
+  constructor(public s: EngineState, private env: Environment, profile?: ProfileWorld) { if (profile) this.profile = profile; }
+
+  /** Nya reservat eller inflyttade: byggs om av sessionen när de ändras. */
+  setProfileWorld(p: ProfileWorld): void { this.profile = p; this.candCache.clear(); }
+  get levels(): LevelIndex { return this.profile.levels; }
+
+  /** Ett djur dyker upp direkt, utan budget (inflyttning när en slinga sluts: garanterat möte). */
+  forceAppear(c: Candidate, tMs: number, player: LatLon | null, via: AppearVia = "moved_in"): EngineEvent {
+    const pose = idlePose(c, tMs, this.env);
+    this.s.used[c.id] = c.window;
+    this.s.encounters++;
+    this.s.active.push(this.animalFrom(c, pose, tMs));
+    return { type: "appear", id: c.id, species: c.species, distM: player ? Math.round(haversineM(pose.pos, player)) : 0, habitat: this.env.habitat(pose.pos), tMs, via };
+  }
+
+  /** En observation: kandidaten kan aktiveras som andra (inom räckhåll, med budget) fram till `untilMs`. */
+  addObservation(c: Candidate, untilMs: number): void { (this.s.observations ??= []).push({ c, untilMs }); }
+
+  private animalFrom(c: Candidate, pose: ReturnType<typeof idlePose>, tMs: number): Animal {
+    return { id: c.id, species: c.species, seed: c.seed, cell: c.cell, window: c.window, n: c.n, ...(c.variant ? { variant: c.variant } : {}), home: c.home, pos: pose.pos, headingDeg: pose.headingDeg, state: pose.state, alarm: 0, disturbed: false, appearedAtMs: tMs };
+  }
 
   setEnvironment(env: Environment): void { this.env = env; this.candCache.clear(); }
 
@@ -141,31 +169,48 @@ export class WorldEngine {
     const live = this.s.active.filter((a) => a.state !== "gone");
     if (live.length >= SPAWN.maxActive) return;
     const w = windowOf(tMs);
-    const eligible: { c: Candidate; pos: LatLon; d: number; key: number }[] = [];
+    const eligible: { c: Candidate; pos: LatLon; d: number; key: number; via: AppearVia }[] = [];
+    const pool: { c: Candidate; via: AppearVia }[] = [];
     for (const cell of cellsAround(player, SPAWN.maxDistM)) {
-      for (const c of this.candidatesFor(cell, w)) {
+      for (const c of this.candidatesFor(cell, w)) pool.push({ c, via: "base" });
+      if (!this.profile.levels.empty) for (const c of this.reserveFor(cell, w)) pool.push({ c, via: "reserve" });
+    }
+    for (const r of this.profile.residents) if (haversineM(r.home, player) <= SPAWN.maxDistM + 120) pool.push({ c: residentCandidate(r, w), via: "resident" });
+    for (const o of this.s.observations ?? []) if (o.untilMs > tMs) pool.push({ c: o.c, via: "observation" });
+    {
+      for (const { c, via } of pool) {
         if (this.s.used[c.id] !== undefined) continue;
         const pose = idlePose(c, tMs, this.env);
         const d = haversineM(pose.pos, player);
         if (d < SPAWN.minDistM || d > SPAWN.maxDistM) continue;
         if (live.some((a) => haversineM(a.pos, pose.pos) < SPAWN.minSpacingM)) continue;
         // Deterministisk men spridd ordning: samma val på två telefoner på samma plats.
-        eligible.push({ c, pos: pose.pos, d, key: hash32(c.id, "pick") });
+        // Inflyttade och observerade djur går före: de är skälet att gå dit.
+        eligible.push({ c, pos: pose.pos, d, key: via === "resident" || via === "observation" ? 0 : hash32(c.id, "pick"), via });
       }
     }
     if (!eligible.length) return;
-    eligible.sort((a, b) => a.key - b.key);
-    const { c, d } = eligible[0];
+    eligible.sort((a, b) => a.key - b.key || (a.c.id < b.c.id ? -1 : 1));
+    const { c, d, via } = eligible[0];
     const pose = idlePose(c, tMs, this.env);
     this.s.budget -= 1;
     this.s.used[c.id] = c.window;
     this.s.encounters++;
-    this.s.active.push({ id: c.id, species: c.species, seed: c.seed, cell: c.cell, window: c.window, n: c.n, ...(c.variant ? { variant: c.variant } : {}), home: c.home, pos: pose.pos, headingDeg: pose.headingDeg, state: pose.state, alarm: 0, disturbed: false, appearedAtMs: tMs });
-    ev.push({ type: "appear", id: c.id, species: c.species, distM: Math.round(d), habitat: this.env.habitat(player), tMs });
+    if (via === "observation") this.s.observations = (this.s.observations ?? []).filter((o) => o.c.id !== c.id);
+    this.s.active.push(this.animalFrom(c, pose, tMs));
+    ev.push({ type: "appear", id: c.id, species: c.species, distM: Math.round(d), habitat: this.env.habitat(player), tMs, via });
+  }
+
+  private reserveFor(c: Cell, window: number): Candidate[] {
+    const k = `r${c.row},${c.col},${window}`;
+    let v = this.candCache.get(k);
+    if (!v) { v = reserveCandidates(c, window, this.env, this.profile.key, this.profile.levels); this.candCache.set(k, v); }
+    return v;
   }
 
   private prune(tMs: number): void {
     const w = windowOf(tMs);
+    if (this.s.observations) this.s.observations = this.s.observations.filter((o) => o.untilMs > tMs);
     for (const [id, win] of Object.entries(this.s.used)) if (win < w - 1) delete this.s.used[id];
     this.s.active = this.s.active.filter((a) => a.state !== "gone" || tMs - (a.goneAtMs ?? tMs) < 5000);
   }

@@ -44,8 +44,11 @@ export interface GameMapProps {
   onUserMove?: () => void;
   /** Spelarens eget spår under promenaden. */
   track?: LatLon[];
-  /** Reservat som GeoJSON-ringar [lon, lat]. */
+  /** Reservat som GeoJSON-ringar [lon, lat], med nivå (färgen blir varmare med nivån). */
   reserves?: [number, number][][][];
+  reserveLevels?: number[];
+  /** Observationer: ungefärlig plats och etikett. */
+  sightings?: { id: string; lat: number; lon: number; label: string }[];
   /** Nyss tillagd yta (växer fram); byt `id` för att spela animationen igen. */
   closure?: { id: number; pieces: [number, number][][][] } | null;
   /** Synliga djur (motorns positioner; kartan glider mellan dem). */
@@ -97,8 +100,8 @@ export default function GameMap(props: GameMapProps) {
       map.addSource("acc", { type: "geojson", data: fc() });
       map.addLayer({ id: "acc", type: "fill", source: "acc", paint: { "fill-color": "#f4e9cf", "fill-opacity": 0.12 } });
       map.addSource("reserves", { type: "geojson", data: fc() });
-      map.addLayer({ id: "reserves", type: "fill", source: "reserves", paint: { "fill-color": "#9cc56b", "fill-opacity": 0.22 } });
-      map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": "#c8e39b", "line-width": 2, "line-opacity": 0.8 } });
+      map.addLayer({ id: "reserves", type: "fill", source: "reserves", paint: { "fill-color": ["match", ["get", "level"], 3, "#f2d36b", 2, "#c9e07a", 1, "#a8d070", "#9cc56b"], "fill-opacity": ["match", ["get", "level"], 3, 0.3, 2, 0.27, 1, 0.24, 0.2] } });
+      map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#f6e39c", "#c8e39b"], "line-width": ["match", ["get", "level"], 3, 3, 2, 2.5, 2], "line-opacity": 0.85 } });
       map.addSource("closure", { type: "geojson", data: fc() });
       map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#f2d36b", "fill-opacity": 0 } });
       map.addSource("track", { type: "geojson", data: fc() });
@@ -126,8 +129,25 @@ export default function GameMap(props: GameMapProps) {
   const { player, accuracyM, follow, track, reserves, closure } = props;
 
   useEffect(() => { if (loaded) src("track", fc(track && track.length > 1 ? [line(track)] : [])); }, [loaded, track]);
-  const polys = (rs: [number, number][][][]): GeoJSON.Feature[] => rs.map((rings) => ({ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: rings.map((r) => [...r, r[0]]) } }));
-  useEffect(() => { if (loaded) src("reserves", fc(polys(reserves ?? []))); }, [loaded, reserves]);
+  const polys = (rs: [number, number][][][], levels?: number[]): GeoJSON.Feature[] => rs.map((rings, i) => ({ type: "Feature", properties: { level: levels?.[i] ?? 0 }, geometry: { type: "Polygon", coordinates: rings.map((r) => [...r, r[0]]) } }));
+  useEffect(() => { if (loaded) src("reserves", fc(polys(reserves ?? [], props.reserveLevels))); }, [loaded, reserves, props.reserveLevels]);
+  // Observationer: en pulserande ring där arten sågs (ungefärligt).
+  const sightingMarkers = useRef(new Map<string, Marker>());
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!loaded || !map) return;
+    const live = new Set((props.sightings ?? []).map((x) => x.id));
+    for (const [id, m] of sightingMarkers.current) if (!live.has(id)) { m.remove(); sightingMarkers.current.delete(id); }
+    for (const x of props.sightings ?? []) {
+      if (sightingMarkers.current.has(x.id)) continue;
+      const el = document.createElement("div");
+      el.className = "sighting";
+      el.setAttribute("data-testid", "sighting");
+      el.innerHTML = `<span class="ring"></span><span class="slabel"></span>`;
+      (el.querySelector(".slabel") as HTMLElement).textContent = x.label;
+      sightingMarkers.current.set(x.id, new Marker({ element: el }).setLngLat([x.lon, x.lat]).addTo(map));
+    }
+  }, [loaded, props.sightings]);
   // Ytan växer fram: en gul fyllning som tonar in och sedan ut över reservatet (spec: Direkt återkoppling).
   useEffect(() => {
     const map = mapRef.current;

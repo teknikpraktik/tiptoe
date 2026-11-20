@@ -1,4 +1,5 @@
 import type { EngineState } from "@/engine/engine";
+import type { Resident } from "@/engine/world";
 import type { SpeciesId } from "@/engine/species";
 import type { Reserve, TrackPoint } from "@/geo/reserves/reserves";
 import type { Lang } from "@/i18n";
@@ -90,6 +91,10 @@ export class Repo {
   async saveSnapshot(profileId: string, s: WalkSnapshot): Promise<void> { await this.db.store<WalkSnapshot>("world").put(`${profileId}:snap:${s.walkId}`, s); }
   async snapshot(profileId: string, walkId: string): Promise<WalkSnapshot | undefined> { return this.db.store<WalkSnapshot>("world").get(`${profileId}:snap:${walkId}`); }
   async deleteSnapshot(profileId: string, walkId: string): Promise<void> { await this.db.store("world").delete(`${profileId}:snap:${walkId}`); }
+
+  // --- inflyttade djur (per profil, mellan promenader) ---
+  async residents(profileId: string): Promise<Resident[]> { return (await this.db.store<Resident[]>("world").get(`${profileId}:residents`)) ?? []; }
+  async saveResidents(profileId: string, rs: Resident[]): Promise<void> { await this.db.store<Resident[]>("world").put(`${profileId}:residents`, rs); }
 
   // --- reservat ---
   async reserves(profileId: string): Promise<Reserve[]> { return this.db.store<Reserve>("reserves").range(`${profileId}:`); }

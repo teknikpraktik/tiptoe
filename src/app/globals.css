@@ -126,3 +126,8 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 /* Fåglar lyfter, utter och bäver dyker undan (spec: Vatten). */
 .amark[data-state=flee][data-escape=fly] .adot { transform: translateY(-24px) scale(.6); opacity: .3; transition: transform 1.4s ease-out, opacity 1.4s; }
 .amark[data-state=gone][data-escape=dive] .adot { transform: scale(1.8); opacity: 0; border-color: #9fd0e6; }
+.levelbar { position: absolute; left: 12px; right: 12px; top: calc(56px + var(--safe-top)); padding: 6px 10px; border-radius: 10px; background: #1f231ccc; font-size: 13px; z-index: 4; }
+.sighting { position: relative; width: 44px; height: 44px; pointer-events: none; }
+.sighting .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px dashed #f2d36b; animation: spulse 2.4s infinite; }
+.sighting .slabel { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 12px; color: #f2d36b; background: #1f231ccc; padding: 1px 6px; border-radius: 6px; }
+@keyframes spulse { 50% { transform: scale(1.25); opacity: .55; } }
