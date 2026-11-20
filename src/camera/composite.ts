@@ -59,8 +59,8 @@ export interface CompositeInput {
   /** Skärmens (kameravyns) bredd/höjd. */
   viewAspect: number;
   zoom: number;
-  /** Djurets bild, eller null (då bara kamerabilden). I 3D-läget är det renderarens canvas med samma storlek som vyn. */
-  animal: null | { img: Src; imgAspect: number; x: number; y: number; heightFrac: number; mirror?: boolean; blurPx: number; shadow: boolean; fullFrame?: boolean };
+  /** Djurets bild, eller null (då bara kamerabilden). */
+  animal: null | { img: Src; imgAspect: number; x: number; y: number; heightFrac: number; mirror?: boolean; blurPx: number; shadow: boolean };
   grade?: Grade;
   grain?: number;
   /** Skapar en hjälp-canvas (för oskärpa och korn). I webbläsaren: document.createElement("canvas"). */
@@ -75,9 +75,7 @@ export function drawComposite(ctx: Ctx, outW: number, outH: number, o: Composite
   const crop = visibleCrop(o.videoW, o.videoH, o.viewAspect, o.zoom);
   ctx.drawImage(o.video, crop.x, crop.y, crop.w, crop.h, 0, 0, outW, outH);
   const a = o.animal;
-  if (a && a.fullFrame) {
-    ctx.drawImage(a.img, 0, 0, outW, outH);
-  } else if (a) {
+  if (a) {
     const r = animalRect(outW, outH, a.x, a.y, a.heightFrac, a.imgAspect);
     if (a.shadow) {
       // Kontaktskugga: en mjuk mörk ellips under fötterna.

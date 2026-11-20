@@ -131,7 +131,7 @@ export function Walk() {
         </>}><p>{t("walk.endBody")}</p></Modal>
       )}
       {camera && target && (
-        <CameraView target={target} mode="2d" orientation={camera.orientation} canShoot={!!v.photoTarget?.ready && v.photoTarget.id === camera.id}
+        <CameraView target={target} orientation={camera.orientation} canShoot={!!v.photoTarget?.ready && v.photoTarget.id === camera.id}
           blockedReason={v.photoTarget?.id === camera.id && v.photoTarget.ready ? null : t("camera.standStill")}
           onClose={() => setCamera(null)} onShot={onShot} onLog={(e, d) => s.logEvent(e, d)} />
       )}

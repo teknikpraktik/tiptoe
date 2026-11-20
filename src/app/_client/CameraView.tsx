@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { drawComposite, lookFor, outputSize, visibleCrop } from "@/camera/composite";
-import { DEFAULT_CAMERA, distanceQuality, placeAnimal, teleZoom, viewFor, type Placement, type View } from "@/camera/projection";
-import type { ThreeView } from "@/camera/three-view";
+import { distanceQuality, placeAnimal, teleZoom, viewFor, type Placement, type View } from "@/camera/projection";
 import { AnchoredYaw } from "@/sensors/orientation";
 import { cameraErrorKind, openRearCamera, stopStream, streamLooksDead, type CameraErrorKind } from "./camera";
 import { useT } from "./i18n";
@@ -17,8 +16,6 @@ export interface AnimalImages {
   back: Record<Pose, string>;
   /** Utklippens bredd/höjd. */
   aspect: number;
-  /** glTF-modell för 3D-läget. */
-  glb?: string;
 }
 
 export interface CameraTarget {
@@ -39,13 +36,11 @@ export interface ShotResult {
   placement: Placement;
   zoom: number;
   quality: number;
-  mode: "2d" | "3d";
 }
 
 export interface CameraMetrics {
   firstFrameMs: number | null;
   fps: number | null;
-  threeLoadMs: number | null;
   heapMB: number | null;
   restarts: number;
   orientation: OrientationStatus | "pending";
@@ -59,7 +54,6 @@ export interface CameraMetrics {
  */
 export function CameraView(props: {
   target: CameraTarget;
-  mode: "2d" | "3d";
   canShoot: boolean;
   blockedReason?: string | null;
   orientation: OrientationStatus;
@@ -72,8 +66,6 @@ export function CameraView(props: {
   const video = useRef<HTMLVideoElement>(null);
   const img = useRef<HTMLImageElement>(null);
   const shadow = useRef<HTMLDivElement>(null);
-  const threeHost = useRef<HTMLDivElement>(null);
-  const three = useRef<ThreeView | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const sample = useRef<OrientationSample | null>(null);
   const anchor = useRef(new AnchoredYaw());
@@ -87,7 +79,7 @@ export function CameraView(props: {
   const [hint, setHint] = useState<"searching" | "out" | null>("searching");
   const [hasCompass, setHasCompass] = useState(false);
   const [busy, setBusy] = useState(false);
-  const metrics = useRef<CameraMetrics>({ firstFrameMs: null, fps: null, threeLoadMs: null, heapMB: null, restarts: 0, orientation: props.orientation, compass: false, video: "" });
+  const metrics = useRef<CameraMetrics>({ firstFrameMs: null, fps: null, heapMB: null, restarts: 0, orientation: props.orientation, compass: false, video: "" });
   const zoom = teleZoom(props.target.distM);
 
   // --- Kamerans ström: startas när vyn monteras och när sidan blir synlig igen; stoppas när den döljs eller stängs. ---
@@ -139,24 +131,7 @@ export function CameraView(props: {
     return () => { src.stop(); document.removeEventListener("visibilitychange", vis); };
   }, [props.orientation]);
 
-  // --- 3D (lazy) ---
-  useEffect(() => {
-    if (props.mode !== "3d" || !props.target.images.glb) return;
-    let disposed = false;
-    const t0 = performance.now();
-    void import("@/camera/three-view").then(async ({ createThreeView }) => {
-      const v = await createThreeView(propsRef.current.target.images.glb!);
-      if (disposed) { v.dispose(); return; }
-      three.current = v;
-      metrics.current.threeLoadMs = Math.round(performance.now() - t0);
-      v.canvas.className = "cam-three";
-      threeHost.current?.appendChild(v.canvas);
-      propsRef.current.onLog?.("three_loaded", { ms: metrics.current.threeLoadMs, modelMs: Math.round(v.loadMs) });
-    }).catch((e) => propsRef.current.onLog?.("three_error", { message: String(e) }));
-    return () => { disposed = true; three.current?.canvas.remove(); three.current?.dispose(); three.current = null; };
-  }, [props.mode, props.target.images.glb]);
-
-  // --- En bildrutesloop: kurs → placering → utklipp (2D) eller rendering (3D). Vilar när sidan är dold. ---
+  // --- En bildrutesloop: kurs → placering → utklipp. Vilar när sidan är dold. ---
   useEffect(() => {
     let raf = 0;
     const mountedAt = performance.now();
@@ -194,13 +169,6 @@ export function CameraView(props: {
       view.current = { yaw, pitch, placement: pl };
       setHintOnce(pl.inFrame ? null : "out");
       const W = box.clientWidth, H = box.clientHeight;
-      if (P.mode === "3d" && three.current) {
-        hide();
-        const v = three.current;
-        if (v.canvas.width !== Math.round(W * Math.min(2, devicePixelRatio))) v.resize(W, H, Math.min(2, devicePixelRatio));
-        v.render({ yawDeg: yaw, pitchDeg: pitch, bearingDeg: tg.bearingDeg, distM: tg.distM, animalHeadingDeg: tg.headingDeg, vfovDeg: DEFAULT_CAMERA.vfovDeg / z, nudgeDeg: nudgeRef.current * (DEFAULT_CAMERA.vfovDeg / z) });
-        return;
-      }
       const el = img.current, sh = shadow.current;
       if (!el || !sh) return;
       const vw = viewFor(tg.headingDeg, tg.bearingDeg);
@@ -241,13 +209,12 @@ export function CameraView(props: {
       const look = lookFor(q);
       const vw = viewFor(tg.headingDeg, tg.bearingDeg);
       let animal: Parameters<typeof drawComposite>[3]["animal"] = null;
-      if (props.mode === "3d" && three.current) animal = { img: three.current.canvas, imgAspect: aspect, x: 0, y: 0, heightFrac: 1, blurPx: 0, shadow: false, fullFrame: true };
-      else if (pl) animal = { img: await loadImage(imageFor(tg.images, vw, tg.pose)), imgAspect: tg.images.aspect, x: pl.x, y: pl.y, heightFrac: pl.heightFrac, mirror: vw === "right", blurPx: look.blurPx * (size.h / box.clientHeight) * 0.6, shadow: true };
+      if (pl) animal = { img: await loadImage(imageFor(tg.images, vw, tg.pose)), imgAspect: tg.images.aspect, x: pl.x, y: pl.y, heightFrac: pl.heightFrac, mirror: vw === "right", blurPx: look.blurPx * (size.h / box.clientHeight) * 0.6, shadow: true };
       drawComposite(ctx, size.w, size.h, { video: v, videoW: v.videoWidth, videoH: v.videoHeight, viewAspect: aspect, zoom: z, animal, grain: look.grain, makeCanvas: (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; } });
       const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.82));
       if (!blob) throw new Error("toBlob failed");
-      props.onLog?.("photo", { bytes: blob.size, w: size.w, h: size.h, zoom: z, mode: props.mode, inFrame: pl?.inFrame ?? false });
-      props.onShot({ blob, width: size.w, height: size.h, placement: pl ?? { x: 0.5, y: 0.5, heightFrac: 0, offAxisDeg: 180, inFrame: false }, zoom: z, quality: q, mode: props.mode });
+      props.onLog?.("photo", { bytes: blob.size, w: size.w, h: size.h, zoom: z, inFrame: pl?.inFrame ?? false });
+      props.onShot({ blob, width: size.w, height: size.h, placement: pl ?? { x: 0.5, y: 0.5, heightFrac: 0, offAxisDeg: 180, inFrame: false }, zoom: z, quality: q });
     } catch (e) {
       props.onLog?.("photo_error", { message: String(e) });
     } finally {
@@ -262,7 +229,6 @@ export function CameraView(props: {
         <div ref={shadow} className="cam-shadow" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img ref={img} className="cam-animal" alt="" data-testid="cam-animal" />
-        <div ref={threeHost} className="cam-three-host" />
         <div className="cam-look" aria-hidden="true" />
       </div>
       <div className="cam-top">

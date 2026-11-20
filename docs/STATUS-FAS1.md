@@ -4,6 +4,8 @@ Datum: 2026-11-20. Fas 1 steg 1–6 är byggda och levererade som sex staplade P
 
 Det viktigaste att veta: allt är verifierat i Node och i headless Chromium med mockad GPS, fejkad kamera och riktiga OpenStreetMap-tiles som fixturer. **Ingenting är provat på en riktig telefon eller utomhus.** De acceptanskriterier som kräver fält eller manuellt test är därför markerade som delvis uppfyllda.
 
+> **Efter fas 1 (se `docs/BESLUT.md`):** Kameratestet finns nu under **Test (fas 1) → Fälttest → Kameratest** (`/field/camera`, bara 2D). Geometritestet är borttaget eftersom biblioteket är valt; hoppa över det steget i listan nedan.
+
 ## PR:er (mergas i ordning)
 
 | Steg | PR | Gren |

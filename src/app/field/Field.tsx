@@ -1,6 +1,7 @@
 // Origin: teknikpraktik/solosurvival@033a121 src/app/field/Field.tsx (kategori B: fältdiagnostik). Innehållet är nytt.
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MAX_PLAUSIBLE_SPEED_MPS } from "@/config/gps";
 import { GpsFilter } from "@/gps/filters/filter";
@@ -84,6 +85,7 @@ export function Field() {
       <PageHeader title={t("field.title")} />
       <div className="pagebody">
         <p className="muted">{t("field.intro")}</p>
+        <Link className="btn small" href="/field/camera">{t("spike.title")}</Link>
         <div className="card stats" data-testid="field-env">
           <div className="stat"><span>{t("field.secure")}</span><b>{yn(env?.secure)}</b></div>
           <div className="stat"><span>{t("field.standalone")}</span><b>{yn(env?.standalone)}</b></div>

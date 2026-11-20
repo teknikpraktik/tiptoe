@@ -1,4 +1,4 @@
-// Spik 1 i headless Chromium: fejkad kamera (--use-fake-device-for-media-stream) och syntetiska orienteringshändelser.
+// Kameratestet (/field/camera, från spik 1) i headless Chromium: fejkad kamera (--use-fake-device-for-media-stream) och syntetiska orienteringshändelser.
 // Bevisar kedjan överlägg → förankring → sammanslagning → IndexedDB. Ersätter INTE testet på riktig iPhone (se docs/SPIKE-1-KAMERA.md).
 import { setup } from "./lib.mjs";
 
@@ -16,7 +16,7 @@ const pump = async (yaw, ms = 600) => { for (let t = 0; t < ms; t += 50) { await
 const animalX = () => page.evaluate(() => { const el = document.querySelector('[data-testid="cam-animal"]'); if (!el || el.style.display === "none") return null; const r = el.getBoundingClientRect(); return (r.left + r.right) / 2; });
 
 try {
-  await page.goto(base + "/spike/camera/");
+  await page.goto(base + "/field/camera/");
   await page.getByTestId("open-camera").waitFor();
   // Kompassen läses när vyn öppnas: skicka händelser medan knappen trycks.
   const feeding = (async () => { for (let i = 0; i < 30; i++) { await orient(120); await page.waitForTimeout(50); } })();
@@ -24,7 +24,7 @@ try {
   await feeding;
   await page.getByTestId("camera").waitFor({ timeout: 5000 });
   await page.waitForFunction(() => document.querySelector("video")?.videoWidth > 0, null, { timeout: 10000 });
-  check("kameravyn öppnas som överlägg utan navigering", page.url().endsWith("/spike/camera/"));
+  check("kameravyn öppnas som överlägg utan navigering", page.url().endsWith("/field/camera/"));
   await pump(120, 800);
   const x0 = await animalX();
   check("djuret syns rakt fram", x0 !== null && Math.abs(x0 - 195) < 40, `x=${x0}`);
@@ -48,19 +48,6 @@ try {
   check("fotostorlek rimlig", /\d+×\d+, \d+ kB/.test(kb), kb);
   await page.locator('[data-testid="photo"]').screenshot({ path: `${OUT}/02-photo-2d.png` });
 
-  // 3D-jämförelsen.
-  await page.getByRole("button", { name: "3D-modell" }).click();
-  const feeding2 = (async () => { for (let i = 0; i < 30; i++) { await orient(120); await page.waitForTimeout(50); } })();
-  await page.getByTestId("open-camera").click();
-  await feeding2;
-  await page.waitForSelector("canvas.cam-three", { timeout: 15000 });
-  await pump(120, 1500);
-  check("3D-modellen laddas lazy och ritas", true);
-  await page.screenshot({ path: `${OUT}/03-camera-3d.png` });
-  await page.getByTestId("shutter").click();
-  await page.getByTestId("photo").waitFor({ timeout: 10000 });
-  check("3D-foto sparas", (await page.getByText(/Sparade foton: 2/).count()) === 1);
-  await page.locator('[data-testid="photo"]').screenshot({ path: `${OUT}/04-photo-3d.png` });
   const m = JSON.parse(await page.getByTestId("metrics").textContent());
   console.log("metrics", JSON.stringify(m));
 } catch (e) {
