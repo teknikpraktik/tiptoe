@@ -75,6 +75,12 @@ export const en: Record<MessageKey, string> = {
   "spike.copied": "Copied",
   "home.tests": "Tests (phase 1)",
 
+  "spike2.title": "Geometry test (spike 2)",
+  "spike2.intro": "Compares the polygon libraries for reserves on this phone: correctness on the test loops and time for a long walk.",
+  "spike2.run": "Run the comparison",
+  "spike2.running": "Running {lib} …",
+  "spike2.result": "{passed}/{total} test loops correct · long walk ({n} points): {ms} ms",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 };
