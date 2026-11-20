@@ -133,7 +133,7 @@ export function Walk() {
       {camera && target && (
         <CameraView target={target} mode="2d" orientation={camera.orientation} canShoot={!!v.photoTarget?.ready && v.photoTarget.id === camera.id}
           blockedReason={v.photoTarget?.id === camera.id && v.photoTarget.ready ? null : t("camera.standStill")}
-          onClose={() => setCamera(null)} onShot={onShot} />
+          onClose={() => setCamera(null)} onShot={onShot} onLog={(e, d) => s.logEvent(e, d)} />
       )}
       {result && (
         <Modal title={result.r && !result.missed ? t(`species.${result.r.species}`) : t("result.title")} onClose={() => { URL.revokeObjectURL(result.url); setResult(null); }} actions={<>

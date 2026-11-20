@@ -17,6 +17,7 @@ import { HeadingTracker } from "@/sensors/heading";
 import { SpeedTracker } from "@/sensors/speed";
 import { currentTempo, StepDetector } from "@/sensors/tempo";
 import { CHUNK_POINTS, type Observation, type Profile, type Repo, type WalkMeta } from "@/storage/repo";
+import { FieldLog, loadLog } from "./fieldlog";
 
 export interface MotionSource {
   /** iOS kräver en användargest: anropas från klicket som startar promenaden. */
@@ -34,6 +35,12 @@ export interface SessionDeps {
   now?: () => number;
   newId?: () => string;
   onLog?: (event: string, data?: Record<string, unknown>) => void;
+  /** För fältloggen. */
+  build?: string;
+  userAgent?: string;
+  standalone?: boolean;
+  /** navigator.storage.persist(): begärs när en promenad startar (spec: Lagring). */
+  persist?: () => Promise<boolean>;
 }
 
 export interface AnimalView { id: string; species: SpeciesId; lat: number; lon: number; state: Animal["state"]; headingDeg: number; distM: number }
@@ -111,7 +118,14 @@ export class WalkSession {
   subscribe = (f: () => void) => { this.listeners.add(f); return () => { this.listeners.delete(f); }; };
   getView = () => this.view;
   private set(patch: Partial<WalkView>) { this.view = { ...this.view, ...patch }; this.listeners.forEach((f) => f()); }
-  private log(event: string, data?: Record<string, unknown>) { this.d.onLog?.(event, data); }
+  private fieldLog: FieldLog | null = null;
+  private log(event: string, data?: Record<string, unknown>) { this.d.onLog?.(event, data); this.fieldLog?.add(this.now(), event, data); }
+  /** Fältloggen sparas direkt efter viktiga händelser (möte, flykt, foto, reservat, kamerafel), inte bara med ögonblicksbilden. */
+  private saveLog() { const db = this.d.repo?.db; if (db && this.fieldLog) void this.fieldLog.save(db).catch(() => undefined); }
+  /** Händelser från gränssnittet (t.ex. kamerafel) till fältloggen. */
+  logEvent(event: string, data?: Record<string, unknown>): void { this.log(event, data); this.saveLog(); }
+  /** Fältloggen för den pågående promenaden (för /field). */
+  currentLog(): FieldLog | null { return this.fieldLog; }
   private id() { return this.d.newId?.() ?? `${this.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`; }
 
   /** Vid appstart: profil, sparade reservat och observationer, och en promenad som var igång när appen stängdes. */
@@ -126,6 +140,8 @@ export class WalkSession {
       this.track = await repo.track(profile.id, active.id);
       this.savedChunks = Math.ceil(this.track.length / CHUNK_POINTS);
       const snap = await repo.snapshot(profile.id, active.id);
+      const saved = await loadLog(repo.db, active.id).catch(() => undefined);
+      this.fieldLog = saved ? FieldLog.fromData(saved) : new FieldLog(active.id, this.now(), this.d.build ?? "dev", this.d.userAgent, this.d.standalone);
       if (snap) { this.addedThisWalkM2 = snap.addedThisWalkM2; this.engine = new WorldEngine(snap.engine, emptyEnv); }
       this.set({ ...patch, stage: "paused", walk: active, track: this.track.map(ll) });
       this.log("restore", { walk: active.id, points: this.track.length, snapshot: !!snap });
@@ -138,12 +154,14 @@ export class WalkSession {
   async start(): Promise<void> {
     const motion = this.d.motion ? await this.d.motion.requestPermission().catch(() => "denied" as const) : "unsupported";
     this.log("motion_permission", { status: motion });
+    if (this.d.persist) void this.d.persist().then((ok) => this.log("storage_persist", { granted: ok }), () => this.log("storage_persist", { granted: false }));
     const repo = this.d.repo, profile = this.view.profile;
     let walk = this.view.walk;
     if (!walk) {
       walk = { id: this.id(), profileId: profile?.id ?? "p1", startedAt: this.now(), endedAt: null, distanceM: 0, trackPoints: 0, photos: 0, points: 0, addedM2: 0 };
       this.track = []; this.savedChunks = 0; this.addedThisWalkM2 = 0;
       this.engine = new WorldEngine(newEngineState(this.now()), emptyEnv);
+      this.fieldLog = new FieldLog(walk.id, this.now(), this.d.build ?? "dev", this.d.userAgent, this.d.standalone);
       await repo?.saveWalk(walk);
       this.log("walk_start", { walk: walk.id });
     } else this.log("walk_resume", { walk: walk.id });
@@ -159,12 +177,15 @@ export class WalkSession {
     const w = this.view.walk, repo = this.d.repo, p = this.view.profile;
     if (w && repo && p) {
       await this.recomputeReserves(true);
+      this.fieldLog?.summarize({ distanceM: Math.round(w.distanceM), trackPoints: this.track.length, addedM2: Math.round(this.addedThisWalkM2), points: w.points, durationS: Math.round((this.now() - w.startedAt) / 1000) });
+      if (this.fieldLog) await this.fieldLog.save(repo.db).catch(() => undefined);
       const done = { ...w, endedAt: this.now(), trackPoints: this.track.length };
       await repo.saveWalk(done);
       await repo.deleteSnapshot(p.id, w.id);
       this.log("walk_end", { walk: w.id, points: this.track.length, addedM2: Math.round(this.addedThisWalkM2) });
     }
     this.engine = null;
+    this.fieldLog = null;
     this.track = [];
     this.set({ stage: "idle", walk: null, track: [], animals: [], photoTarget: null, lastClosure: null });
   }
@@ -216,8 +237,9 @@ export class WalkSession {
   injectGps(e: GpsEvent): void { this.onGps(e); }
 
   private onGps(e: GpsEvent) {
-    if (e.type === "error") { this.set({ gpsError: e.code, quality: this.filter.qualityAt(this.now()) }); this.log("gps_error", { code: e.code }); return; }
+    if (e.type === "error") { if (this.fieldLog) this.fieldLog.data.gps.errors++; this.set({ gpsError: e.code, quality: this.filter.qualityAt(this.now()) }); this.log("gps_error", { code: e.code }); return; }
     const out = this.filter.push(e.fix, e.receivedAtMs);
+    this.fieldLog?.fix(e.receivedAtMs, out.verdict === "accepted" || out.verdict === "reacquired", out.verdict === "jump", e.fix.accuracyM);
     if (out.verdict === "reacquired") this.heading.rebase();
     if (out.verdict === "jump") this.log("gps_jump", { acc: e.fix.accuracyM });
     const pos = out.position;
@@ -254,6 +276,7 @@ export class WalkSession {
     let events: EngineEvent[] = [];
     if (this.env) events = this.engine.step({ tMs, pos, tempo: tempo.tempo, posOk: pos !== null && this.view.quality !== "poor" && this.view.quality !== "unavailable" });
     for (const ev of events) this.log(`animal_${ev.type}`, ev as unknown as Record<string, unknown>);
+    if (events.some((e) => e.type === "appear" || e.type === "flee")) this.saveLog();
     const animals: AnimalView[] = this.engine.visible(pos).map((a) => ({ id: a.id, species: a.species, lat: a.pos.lat, lon: a.pos.lon, state: a.state, headingDeg: a.headingDeg, distM: pos ? haversineM(pos, a.pos) : Infinity }));
     let photoTarget: WalkView["photoTarget"] = null;
     for (const a of animals) {
@@ -298,6 +321,7 @@ export class WalkSession {
       // Läget uppdateras innan något sparas, så att nästa beräkning alltid utgår från de nya reservaten.
       this.set({ reserves: r.reserves, totalAreaM2: totalAreaM2(r.reserves), lastClosure: { id: ++this.closureSeq, ha: r.addedM2 / 10_000, kind: r.grown.length ? "grew" : "new", pieces: r.newPieces, atMs: this.now() } });
       this.log("reserve_closed", { addedM2: Math.round(r.addedM2), created: r.created, grown: r.grown, merged: r.merged, ms, breaks: r.breaks.length });
+      this.saveLog();
       const p = this.view.profile;
       if (p) await this.d.repo?.replaceReserves(p.id, r.reserves);
       if (w) await this.d.repo?.saveWalk(w);
@@ -312,6 +336,7 @@ export class WalkSession {
     this.lastSnapMs = this.now();
     await this.d.repo.saveSnapshot(p.id, { walkId: w.id, savedAt: this.now(), engine: this.engine.s, addedThisWalkM2: this.addedThisWalkM2 });
     await this.d.repo.saveWalk({ ...w, trackPoints: this.track.length });
+    if (this.fieldLog) await this.fieldLog.save(this.d.repo.db).catch(() => undefined);
   }
 
   // ---------- foto ----------
@@ -347,6 +372,7 @@ export class WalkSession {
     this.set({ score, walk: { ...w } });
     const newSpecies = !before.species.includes(a.species) && score.species.includes(a.species);
     this.log("photo_rated", { animalId, species: a.species, stars: rating.stars, distM: Math.round(distM), points, newSpecies });
+    this.saveLog();
     return { stars: rating.stars, rating, points, newSpecies, species: a.species, photoId, observation };
   }
 
