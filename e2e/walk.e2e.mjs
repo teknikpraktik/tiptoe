@@ -135,6 +135,47 @@ try {
   const envText = await page.getByTestId("field-env").innerText();
   check("diagnostiken visar lagring, beständighet och wake lock", /Lagring/.test(envText) && /Beständig lagring/.test(envText) && /Skärmlås/.test(envText));
   await page.screenshot({ path: `${OUT}/05-field.png`, fullPage: true });
+
+  // Export → rensa → import (spec fas 2: återställer en profil med foton exakt).
+  const snapshot = () => page.evaluate(async () => {
+    const db = await new Promise((ok, fail) => { const r = indexedDB.open("tiptoe"); r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error); });
+    const all = (store) => new Promise((ok) => { const r = db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => ok(r.result); });
+    const keys = (store) => new Promise((ok) => { const r = db.transaction(store).objectStore(store).getAllKeys(); r.onsuccess = () => ok(r.result); });
+    const photos = await all("photos");
+    const hashes = [];
+    for (const p of photos) { const d = await crypto.subtle.digest("SHA-256", await p.blob.arrayBuffer()); hashes.push(Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("")); }
+    const out = { photos: hashes.sort(), observations: (await all("observations")).map((o) => `${o.animalId}:${o.species}:${o.stars}:${o.points}`).sort(), reserves: (await all("reserves")).map((r) => `${r.id}:${Math.round(r.areaM2)}`).sort(), walks: (await keys("walks")).length, residents: JSON.stringify(await all("world")).length > 2 };
+    db.close();
+    return out;
+  });
+  const beforeExport = await snapshot();
+  page.on("dialog", (d) => void d.accept());
+  await page.goto(base + "/settings/");
+  await page.getByTestId("export").waitFor();
+  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), page.getByTestId("export").click()]);
+  const zipPath = `${OUT}/export.zip`;
+  await dl.saveAs(zipPath);
+  check("exporten laddas ner som zip-fil", (await dl.suggestedFilename()).endsWith(".zip"), await dl.suggestedFilename());
+  await page.waitForFunction(() => !/aldrig/.test(document.querySelector('[data-testid="last-export"]')?.textContent ?? "aldrig"), null, { timeout: 5000 }).catch(() => undefined);
+  check("senaste export visas", !/aldrig/.test(await page.getByTestId("last-export").innerText()));
+  // Rensa: hela databasen bort (som att rensa webbläsardata).
+  await page.goto(base + "/field/");
+  await page.evaluate(() => new Promise((ok) => { const r = indexedDB.deleteDatabase("tiptoe"); r.onsuccess = r.onerror = r.onblocked = () => ok(null); }));
+  await page.goto(base + "/");
+  await page.getByTestId("stats").waitFor({ timeout: 10000 });
+  check("efter rensning är allt borta", /^.*0 poäng · 0 av 15 arter/.test(await page.getByTestId("stats").innerText()), await page.getByTestId("stats").innerText());
+  await page.goto(base + "/settings/");
+  await page.getByTestId("import-file").setInputFiles(zipPath);
+  await page.getByTestId("import-summary").waitFor({ timeout: 10000 });
+  check("importen visar innehållet först", /1 foton|1 photos/.test(await page.getByTestId("import-summary").innerText()), await page.getByTestId("import-summary").innerText());
+  await page.getByTestId("import-replace").click();
+  await page.getByTestId("backup-msg").waitFor({ timeout: 10000 });
+  const afterImport = await snapshot();
+  check("import återställer foton exakt (SHA-256), observationer, reservat och promenader", JSON.stringify(afterImport) === JSON.stringify(beforeExport), `${afterImport.photos.length} foton, ${afterImport.observations.length} obs, ${afterImport.reserves.length} reservat`);
+  await page.goto(base + "/");
+  await page.getByTestId("stats").waitFor();
+  const statsAfter = await page.getByTestId("stats").innerText();
+  check("startsidan visar samma poäng, arter och areal igen", statsAfter === stats, `${statsAfter} (före: ${stats})`);
   void ctx;
 } catch (e) {
   check("oväntat fel", false, String(e));

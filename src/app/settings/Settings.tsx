@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { LANGS, type Lang } from "@/i18n";
 import { audio } from "../_client/audio";
+import { Backup } from "./Backup";
 import { PageHeader } from "../_client/Modal";
 import { useLang, useT } from "../_client/i18n";
 import { useSession, useWalkView } from "../_client/SessionProvider";
@@ -79,6 +80,7 @@ export function Settings() {
           <div className="seg">{(["child", "adult"] as const).map((k) => <button key={k} className={`btn small ${newKind === k ? "on" : ""}`} onClick={() => setNewKind(k)}>{t(`settings.kind.${k}`)}</button>)}</div>
           <button className="btn primary" disabled={locked || !newName.trim()} onClick={async () => { await s.createProfile(newName, newKind, p.lang); setNewName(""); }} data-testid="create-profile">{t("settings.create")}</button>
         </section>
+        <Backup />
         <Link className="btn ghost" href="/field">{t("settings.diagnostics")}</Link>
       </div>
     </main>
