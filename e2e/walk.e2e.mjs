@@ -164,7 +164,8 @@ try {
   await page.waitForFunction(() => !/aldrig/.test(document.querySelector('[data-testid="last-export"]')?.textContent ?? "aldrig"), null, { timeout: 5000 }).catch(() => undefined);
   check("senaste export visas", !/aldrig/.test(await page.getByTestId("last-export").innerText()));
   // Rensa: hela databasen bort (som att rensa webbläsardata).
-  await page.goto(base + "/field/");
+  // Från en sida utan appen (samma origin), så att appens omladdning när databasen försvinner inte stör testet.
+  await page.goto(base + "/version.json");
   await page.evaluate(() => new Promise((ok) => { const r = indexedDB.deleteDatabase("tiptoe"); r.onsuccess = r.onerror = r.onblocked = () => ok(null); }));
   await page.goto(base + "/");
   await page.getByTestId("stats").waitFor({ timeout: 10000 });
