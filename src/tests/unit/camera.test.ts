@@ -97,5 +97,7 @@ describe("placering i bilden", () => {
     expect(viewFor(180, 0)).toBe("front");
     expect(viewFor(90, 0)).toBe("right");
     expect(viewFor(270, 0)).toBe("left");
+    expect(viewFor(135, 0)).toBe("quarter_right");
+    expect(viewFor(225, 0)).toBe("quarter_left");
   });
 });

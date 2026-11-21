@@ -60,7 +60,7 @@ export function Walk() {
       const sp = SPECIES[c.species];
       const images = manifest?.species[c.species]?.views;
       if (!images) return;
-      setTarget({ bearingDeg: c.bearingDeg, distM: c.distM, headingDeg: c.headingDeg, heightM: sp.heightM, photoDistM: sp.photoM, pose: c.state === "alert" ? "alert" : "calm", images });
+      setTarget({ bearingDeg: c.bearingDeg, distM: c.distM, headingDeg: c.headingDeg, heightM: sp.heightM, photoDistM: sp.photoM, pose: c.state === "alert" || c.state === "look" ? "alert" : c.state === "rest" ? "rest" : "calm", images });
     };
     upd();
     const h = setInterval(upd, 250);

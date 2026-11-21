@@ -67,11 +67,15 @@ export function placeAnimal(o: {
 }
 
 /** Vilken vinkel av utklippet som ska visas, ur djurets kurs relativt spelaren (spec: minst framifrån, sidan, bakifrån). */
-export type View = "front" | "left" | "right" | "back";
+export type View = "front" | "quarter_left" | "quarter_right" | "left" | "right" | "back";
 export function viewFor(animalHeadingDeg: number, bearingFromPlayerDeg: number): View {
   // Vinkeln mellan djurets kurs och riktningen från spelaren till djuret: 0 = går bort från spelaren (bakifrån), 180 = mot (framifrån).
   const d = wrap180(animalHeadingDeg - bearingFromPlayerDeg);
   if (Math.abs(d) <= 45) return "back";
-  if (Math.abs(d) >= 135) return "front";
+  if (Math.abs(d) >= 155) return "front";
+  if (Math.abs(d) >= 115) return d > 0 ? "quarter_right" : "quarter_left";
   return d > 0 ? "right" : "left";
 }
+
+/** Bilderna visar djuret åt vänster; åt höger speglas de. */
+export const mirrored = (v: View) => v === "right" || v === "quarter_right";
