@@ -205,6 +205,9 @@ export const sv = {
   "walk.freeze": "FRYS!",
   "walk.freezeWarn": "Den lyfter huvudet …",
 
+  "walk.soundOn": "Ljud på",
+  "walk.soundOff": "Ljud av",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 } as const;

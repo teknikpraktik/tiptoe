@@ -21,6 +21,7 @@ import { SpeedTracker } from "@/sensors/speed";
 import { currentTempo, StepDetector } from "@/sensors/tempo";
 import { CHUNK_POINTS, type Observation, type Profile, type Repo, type WalkMeta } from "@/storage/repo";
 import { FieldLog, loadLog } from "./fieldlog";
+import { SoundDirector, ambienceFor, type Ambience, type SoundCue } from "@/audio/director";
 
 export interface MotionSource {
   /** iOS kräver en användargest: anropas från klicket som startar promenaden. */
@@ -42,6 +43,9 @@ export interface SessionDeps {
   build?: string;
   userAgent?: string;
   standalone?: boolean;
+  /** Ljud (spec: UX → Ljud): närhet, frys-varning, flykt, inflyttning och ambient. Utelämnat = tyst (Node, tester). */
+  onSound?: (c: SoundCue) => void;
+  onAmbience?: (a: Ambience) => void;
   /** navigator.storage.persist(): begärs när en promenad startar (spec: Lagring). */
   persist?: () => Promise<boolean>;
 }
@@ -126,6 +130,10 @@ export class WalkSession {
   private hidden = false;
   private closureSeq = 0;
   private noticeSeq = 0;
+  private sound = new SoundDirector();
+  private ambience: Ambience = "none";
+  private setAmbience(a: Ambience) { if (a !== this.ambience) { this.ambience = a; this.d.onAmbience?.(a); } }
+  private playSound(c: SoundCue) { this.d.onSound?.(c); this.log("sound", { kind: c.kind, pan: Math.round(c.pan * 100) / 100, gain: Math.round(c.gain * 100) / 100 }); }
   private residents: Resident[] = [];
   private notify(key: NoticeKey, vars: Record<string, string | number>) { this.set({ notice: { id: ++this.noticeSeq, key, vars } }); }
   /** Profilens värld till motorn: nivåer ur reservaten och de inflyttade. */
@@ -204,6 +212,8 @@ export class WalkSession {
 
   async end(): Promise<void> {
     this.stopSensors();
+    this.setAmbience("none");
+    this.sound.reset();
     await this.releaseWakeLock();
     const w = this.view.walk, repo = this.d.repo, p = this.view.profile;
     if (w && repo && p) {
@@ -239,6 +249,7 @@ export class WalkSession {
     this.hidden = hidden;
     if (this.view.stage !== "walking") return;
     if (hidden) {
+      this.setAmbience("none");
       this.stopSensors();
       void this.saveSnapshot();
       void this.releaseWakeLock();
@@ -309,6 +320,11 @@ export class WalkSession {
     this.lookUpReminder(tempo.tempo, tMs);
     for (const ev of events) this.log(`animal_${ev.type}`, ev as unknown as Record<string, unknown>);
     if (pos && this.env) this.maybeObservation(pos, tMs);
+    if (this.d.onSound || this.d.onAmbience) {
+      const heard = this.engine.s.active.map((a) => ({ id: a.id, species: a.species, pos: a.pos, gone: a.state === "gone" }));
+      for (const c of this.sound.update({ tMs, player: pos, headingDeg: this.heading.heading, animals: heard, events })) this.playSound(c);
+      if (pos && this.env) this.setAmbience(ambienceFor(this.env.habitat(pos), this.env.waterDistM(pos, 61, 2000)));
+    }
     const inRes = pos ? this.engine.levels.reserveAt(pos) : null;
     const levelInfo = inRes ? { level: levelForArea(inRes.areaM2), areaM2: inRes.areaM2, toNextM2: toNextLevelM2(inRes.areaM2) } : null;
     if (JSON.stringify(levelInfo) !== JSON.stringify(this.view.levelInfo)) this.set({ levelInfo });
@@ -444,6 +460,7 @@ export class WalkSession {
       const before = this.view.reserves;
       this.syncProfileWorld(r.reserves);
       this.set({ reserves: r.reserves, totalAreaM2: totalAreaM2(r.reserves), lastClosure: { id: ++this.closureSeq, ha: r.addedM2 / 10_000, kind: r.grown.length ? "grew" : "new", pieces: r.newPieces, atMs: this.now() } });
+      this.playSound({ kind: "chime", pan: 0, gain: 0.6 });
       this.log("reserve_closed", { addedM2: Math.round(r.addedM2), created: r.created, grown: r.grown, merged: r.merged, ms, breaks: r.breaks.length });
       await this.afterClosure(before, r.reserves, r.newPieces);
       this.saveLog();

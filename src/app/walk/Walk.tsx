@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { levelForArea } from "@/engine/levels";
 import { SPECIES, type SpeciesId } from "@/engine/species";
 import type { PhotoResult } from "@/play/session";
@@ -12,6 +12,7 @@ import { useT } from "../_client/i18n";
 import type { OrientationStatus } from "../_client/orientationSource";
 import { useSession, useWalkView } from "../_client/SessionProvider";
 import { shareOrDownload } from "../_client/share";
+import { audio } from "../_client/audio";
 
 const GameMap = dynamic(() => import("../_client/GameMap"), { ssr: false });
 
@@ -35,6 +36,7 @@ export function Walk() {
   const [toast, setToast] = useState<string | null>(null);
   const lastClosure = useRef<number | null>(null);
   const [manifest, setManifest] = useState<AnimalManifest | null>(null);
+  const soundOn = useSyncExternalStore(audio.subscribe, () => audio.enabled, () => true);
   useEffect(() => { void animalManifest().then(setManifest); }, []);
 
   // Ny yta: kort meddelande med hektartal.
@@ -95,6 +97,7 @@ export function Walk() {
     setCamera({ id, orientation });
   };
   const onShot = async (shot: ShotResult) => {
+    audio.play({ kind: "shutter", pan: 0, gain: 0.7 });
     const id = camera?.id;
     setCamera(null);
     if (!id) return;
@@ -104,12 +107,13 @@ export function Walk() {
   const near = v.photoTarget ? v.animals.find((a) => a.id === v.photoTarget!.id) : null;
 
   return (
-    <main className="mapshell">
+    <main className="mapshell" onPointerDown={() => audio.unlock()}>
       <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} />
       <div className="statusbar" data-testid="status">
         <CloseButton href="/" />
         <span className={`gps q-${v.quality}`}>{t(`gps.quality.${v.quality}`)}{v.accuracyM != null && v.quality !== "unavailable" ? ` ${t("gps.accuracy", { m: Math.round(v.accuracyM) })}` : ""}</span>
         {v.stage === "walking" && <span className={`chip tempo t-${v.tempo}`} data-testid="tempo">{t(`tempo.${v.tempo}`)}</span>}
+        <button className="chip sound" onClick={() => audio.setEnabled(!soundOn)} aria-pressed={soundOn} data-testid="sound">{soundOn ? t("walk.soundOn") : t("walk.soundOff")}</button>
         <span className="chip" data-testid="score">{t("walk.points", { n: v.score.total })} · {t("walk.area", { ha: fmtHa(v.totalAreaM2) })}</span>
       </div>
       {v.gpsError && <div className="toast" role="alert">{t(`gps.error.${v.gpsError}`)}</div>}
@@ -128,7 +132,7 @@ export function Walk() {
       )}
 
       <div className="controls">
-        {v.stage === "idle" && <button className="btn primary" onClick={() => void s.start()} data-testid="start">{t("walk.start")}</button>}
+        {v.stage === "idle" && <button className="btn primary" onClick={() => { audio.unlock(); void s.start(); }} data-testid="start">{t("walk.start")}</button>}
         {v.stage === "walking" && (
           <>
             <button className="btn small" onClick={() => setTrackUp((x) => !x)}>{trackUp ? t("map.trackUp") : t("map.northUp")}</button>
@@ -145,7 +149,7 @@ export function Walk() {
 
       {v.stage === "paused" && (
         <Modal title={t("walk.pausedTitle")} actions={<>
-          <button className="btn primary" onClick={() => void s.start()} data-testid="resume">{t("walk.resume")}</button>
+          <button className="btn primary" onClick={() => { audio.unlock(); void s.start(); }} data-testid="resume">{t("walk.resume")}</button>
           <button className="btn" onClick={() => void s.end()}>{t("walk.end")}</button>
         </>}><p>{t("walk.pausedBody")}</p></Modal>
       )}
