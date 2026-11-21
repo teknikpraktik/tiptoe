@@ -137,3 +137,19 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .freeze { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); padding: 10px 22px; border-radius: 14px; background: #1f231ce6; font-size: 20px; font-weight: 700; letter-spacing: .04em; z-index: 6; pointer-events: none; }
 .freeze.look { font-size: 34px; color: #fff; background: #8a3b2ae6; }
 .chip.sound { border: 0; color: var(--ink); cursor: pointer; font: inherit; font-size: 12px; }
+
+/* Fältdagbok */
+.fbhead h3 { margin-bottom: 4px; color: var(--accent); }
+.fbhead p { margin: 2px 0; }
+.fbgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fbcell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 12px; border: 1px solid #ffffff18; background: var(--card); color: var(--ink); font: inherit; cursor: pointer; min-height: 120px; }
+.fbcell img { height: 58px; max-width: 100%; object-fit: contain; }
+.fbcell.missing img { filter: brightness(0) opacity(.45); }
+.fbcell.missing { cursor: default; opacity: .8; }
+.fbcell.r-uncommon { border-color: #9fd0e655; } .fbcell.r-rare { border-color: #c9a2e677; } .fbcell.r-very_rare { border-color: #f2d36b88; }
+.fbname { font-size: 13px; text-align: center; }
+.fbstars { color: var(--accent); font-size: 13px; letter-spacing: 1px; }
+.thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.thumb { aspect-ratio: 3 / 4; border: 0; padding: 0; border-radius: 8px; overflow: hidden; background: #000; cursor: pointer; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.chip.rare, .rare-text { color: #c9a2e6; }
