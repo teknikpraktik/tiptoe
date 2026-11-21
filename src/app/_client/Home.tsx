@@ -6,7 +6,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { ALL_SPECIES } from "@/engine/species";
 import { titleFor } from "@/engine/progress";
 import { audio } from "./audio";
-import { useT } from "./i18n";
+import { useLang, useT } from "./i18n";
 import { installPrompt, isIos, isStandalone } from "./install";
 import { Modal } from "./Modal";
 import { useSession, useWalkView } from "./SessionProvider";
@@ -20,6 +20,8 @@ export function Home() {
   const [standalone, setStandalone] = useState(true);
   const [ios, setIos] = useState(false);
   const [warn, setWarn] = useState(false);
+  const [picker, setPicker] = useState(false);
+  const { setLang } = useLang();
   const canInstall = useSyncExternalStore(installPrompt.subscribe, installPrompt.available, () => false);
   useEffect(() => { setStandalone(isStandalone()); setIos(isIos()); }, []);
 
@@ -50,17 +52,28 @@ export function Home() {
             {canInstall && <button className="btn primary wide" onClick={() => void installPrompt.show()}>{t("install.button")}</button>}
           </div>
         )}
+        {v?.profile && (
+          <button className="profilechip" onClick={() => setPicker(true)} data-testid="profile-chip">{t("home.profile", { name: v.profile.name })}</button>
+        )}
         {v && v.storage === "ok" && (
           <p className="muted center" data-testid="stats"><b>{t(`title.${titleFor(v.score.species.length)}`)}</b> · {t("home.stats", { points: v.score.total, species: v.score.species.length, total: ALL_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
         )}
         <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{going ? t("walk.resume") : t("home.startWalk")}</button>
         <Link className="btn ghost" href="/fieldbook" data-testid="home-fieldbook">{t("home.fieldbook")}</Link>
-        <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.settings")}</button>
+        <Link className="btn ghost" href="/settings" data-testid="home-settings">{t("home.settings")}</Link>
         <div className="tests">
           <span className="muted">{t("home.tests")}</span>
           <Link className="btn small" href="/field">{t("home.field")}</Link>
         </div>
       </nav>
+      {picker && v && (
+        <Modal title={t("home.switchProfile")} onClose={() => setPicker(false)} actions={<Link className="btn" href="/settings">{t("home.settings")}</Link>}>
+          {v.profiles.map((x) => (
+            <button key={x.id} className={`btn wide ${x.id === v.profile?.id ? "on" : ""}`} style={{ marginBottom: 8 }} disabled={going && x.id !== v.profile?.id}
+              onClick={async () => { if (ctx && x.id !== v.profile?.id) { await ctx.session.switchProfile(x.id); setLang(x.lang); } setPicker(false); }}>{x.name}</button>
+          ))}
+        </Modal>
+      )}
       {warn && (
         <Modal title={t("install.browserTitle")} onClose={() => setWarn(false)} actions={<>
           <button className="btn" onClick={() => void go()} data-testid="play-anyway">{t("install.playAnyway")}</button>

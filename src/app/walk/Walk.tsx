@@ -108,7 +108,7 @@ export function Walk() {
 
   return (
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} />
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
       <div className="statusbar" data-testid="status">
         <CloseButton href="/" />
         <span className={`gps q-${v.quality}`}>{t(`gps.quality.${v.quality}`)}{v.accuracyM != null && v.quality !== "unavailable" ? ` ${t("gps.accuracy", { m: Math.round(v.accuracyM) })}` : ""}</span>

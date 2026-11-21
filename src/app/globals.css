@@ -153,3 +153,9 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .thumb { aspect-ratio: 3 / 4; border: 0; padding: 0; border-radius: 8px; overflow: hidden; background: #000; cursor: pointer; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .chip.rare, .rare-text { color: #c9a2e6; }
+.form { display: flex; flex-direction: column; gap: 10px; }
+.form input:not([type=range]) { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #ffffff22; background: var(--bg); color: var(--ink); font: inherit; }
+.form h4 { margin: 8px 0 0; }
+.profilerow { justify-content: space-between; align-items: center; }
+.warn-text { color: var(--warn); }
+.profilechip { align-self: center; background: transparent; border: 1px solid #ffffff22; color: var(--ink); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }

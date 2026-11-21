@@ -7,6 +7,8 @@ export interface StoredPhoto {
   blob: Blob;
   width: number;
   height: number;
+  /** Profilen fotot hör till (för radering och export). Saknas på foton från kameratestet. */
+  profileId?: string;
   /** Fri diagnostik (läge 2D/3D, zoom, avstånd) under spiken. */
   meta?: Record<string, unknown>;
 }
