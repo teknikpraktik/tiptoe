@@ -116,6 +116,7 @@ try {
   // Fältdagboken: arten är funnen, fotot går att öppna i stort format.
   await page.getByTestId("home-fieldbook").click();
   await page.waitForURL("**/fieldbook/");
+  await page.waitForFunction(() => /1\/15/.test(document.querySelector('[data-testid="fieldbook-head"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
   const head = await page.getByTestId("fieldbook-head").innerText({ timeout: 5000 });
   check("fältdagboken räknar arter och visar titel", /1\/15 arter/.test(head) && /Nykomling/.test(head), head.replace(/\n/g, " "));
   const found = page.locator(".fbcell.found");
