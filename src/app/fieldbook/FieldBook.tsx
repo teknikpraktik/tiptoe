@@ -50,10 +50,10 @@ export function FieldBookPage() {
     <main className="page">
       <PageHeader title={t("fieldbook.title")} />
       <div className="pagebody">
-        <div className="card fbhead" data-testid="fieldbook-head">
+        <div className="card fbhead" data-testid="fieldbook-head" style={{ backgroundImage: "linear-gradient(rgba(20,24,18,.55), rgba(20,24,18,.85)), url(/backgrounds/lake.webp)" }}>
           <h3>{t(`title.${fb.title}`)}</h3>
           <p>{t("fieldbook.count", { found: fb.speciesFound, total: fb.total })} · {t("fieldbook.points", { n: v?.score.total ?? 0 })}</p>
-          <p className="muted">{fb.nextTitle ? t("fieldbook.next", { n: fb.nextTitle.species - fb.speciesFound, title: t(`title.${fb.nextTitle.id}`) }) : t("fieldbook.allFound")}</p>
+          <p className="muted">{fb.nextTitle ? t("fieldbook.next", { n: fb.nextTitle.species - fb.speciesFound, title: t(`title.${fb.nextTitle.id}`) }) : fb.speciesFound >= fb.total ? t("fieldbook.allFound") : t("fieldbook.bonusLeft")}</p>
         </div>
         {fb.speciesFound === 0 && <p className="muted">{t("fieldbook.empty")}</p>}
         <div className="fbgrid">

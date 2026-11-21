@@ -84,7 +84,7 @@ export function CameraView(props: {
   const [hasCompass, setHasCompass] = useState(false);
   const [busy, setBusy] = useState(false);
   const metrics = useRef<CameraMetrics>({ firstFrameMs: null, fps: null, heapMB: null, restarts: 0, orientation: props.orientation, compass: false, video: "" });
-  const zoom = teleZoom(props.target.distM);
+  const zoom = teleZoom(props.target.distM, props.target.heightM);
 
   // --- Kamerans ström: startas när vyn monteras och när sidan blir synlig igen; stoppas när den döljs eller stängs. ---
   useEffect(() => {
@@ -168,7 +168,7 @@ export function CameraView(props: {
       }
       const box = video.current?.parentElement;
       if (yaw == null || !box) { view.current = { yaw: null, pitch, placement: null }; setHintOnce("searching"); hide(); return; }
-      const z = teleZoom(tg.distM);
+      const z = teleZoom(tg.distM, tg.heightM);
       const pl = placeAnimal({ bearingDeg: tg.bearingDeg, distM: tg.distM, cameraYawDeg: yaw, cameraPitchDeg: pitch, animalHeightM: tg.heightM, zoom: z, verticalNudge: nudgeRef.current });
       view.current = { yaw, pitch, placement: pl };
       setHintOnce(pl.inFrame ? null : "out");
@@ -203,7 +203,7 @@ export function CameraView(props: {
     setBusy(true);
     try {
       const tg = props.target;
-      const z = teleZoom(tg.distM);
+      const z = teleZoom(tg.distM, tg.heightM);
       const aspect = box.clientWidth / box.clientHeight;
       const size = outputSize(visibleCrop(v.videoWidth, v.videoHeight, aspect, z));
       const canvas = document.createElement("canvas");

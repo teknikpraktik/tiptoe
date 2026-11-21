@@ -339,7 +339,7 @@ export class WorldEngine {
         const ang = (k / 16) * 2 * Math.PI;
         const p = fromLocal(a.pos, { x: Math.sin(ang) * 25, y: Math.cos(ang) * 25 });
         if (this.env.blocked(p) || this.env.hazard(p)) continue;
-        const w = this.env.waterDistM(p, WATER_ZONE.maxM + 30, area);
+        const w = this.env.waterDistM(p, WATER_ZONE.maxM + 30, area, sp.needs?.streams);
         if (!best || w < best.w) best = { p, w };
       }
       a.flee = { target: best?.p ?? a.pos, leftM: best ? 25 : 0, kind: "dive" };
@@ -367,7 +367,7 @@ export class WorldEngine {
     const reason: GoneReason = f?.kind === "dive" ? "dove" : "fled";
     if (!f || f.leftM <= 0) { this.gone(a, t, reason, ev); return; }
     const sp = SPECIES[a.species];
-    if (f.kind === "dive" && this.env.waterDistM(a.pos, WATER_ZONE.minM, sp.needs?.waterAreaM2 ?? WATER_ZONE.defaultAreaM2) <= WATER_ZONE.minM) { this.gone(a, t, "dove", ev); return; }
+    if (f.kind === "dive" && this.env.waterDistM(a.pos, WATER_ZONE.minM + 1, sp.needs?.waterAreaM2 ?? WATER_ZONE.defaultAreaM2, sp.needs?.streams) <= WATER_ZONE.minM + 1) { this.gone(a, t, "dove", ev); return; }
     const v = toLocal(a.pos, f.target);
     const len = Math.hypot(v.x, v.y);
     const step = Math.min(len, sp.fleeMps * dt);

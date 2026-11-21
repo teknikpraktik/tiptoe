@@ -8,6 +8,7 @@ describe("fältdagbok och titlar", () => {
     expect(titleFor(8)).toBe("ranger");
     expect(titleFor(14)).toBe("senior_ranger");
     expect(titleFor(15)).toBe("master_ranger");
+    expect(titleFor(16)).toBe("master_ranger");
   });
   it("räknar arter, individer, bästa betyg och varianter; foton utan betyg räknas inte", () => {
     const fb = fieldBook([
@@ -20,7 +21,7 @@ describe("fältdagbok och titlar", () => {
     expect(roe).toMatchObject({ found: true, individuals: 2, photos: 3, bestStars: 3, variants: ["big_buck"], photoIds: ["p3", "p2", "p1"] });
     expect(fb.entries.find((e) => e.species === "moose")!.found).toBe(false);
     expect(fb.speciesFound).toBe(1);
-    expect(fb.total).toBe(15);
+    expect(fb.total).toBe(16);
     expect(fb.nextTitle).toEqual({ id: "tracker", species: 3 });
     // Vanliga först.
     expect(fb.entries[0].species).toBe("squirrel");

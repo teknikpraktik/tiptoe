@@ -121,11 +121,11 @@ try {
   // Fältdagboken: arten är funnen, fotot går att öppna i stort format.
   await page.getByTestId("home-fieldbook").click();
   await page.waitForURL("**/fieldbook/");
-  await page.waitForFunction(() => /1\/15/.test(document.querySelector('[data-testid="fieldbook-head"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
+  await page.waitForFunction(() => /1\/16/.test(document.querySelector('[data-testid="fieldbook-head"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
   const head = await page.getByTestId("fieldbook-head").innerText({ timeout: 5000 });
-  check("fältdagboken räknar arter och visar titel", /1\/15 arter/.test(head) && /Nykomling/.test(head), head.replace(/\n/g, " "));
+  check("fältdagboken räknar arter och visar titel", /1\/16 arter/.test(head) && /Nykomling/.test(head), head.replace(/\n/g, " "));
   const found = page.locator(".fbcell.found");
-  check("den fotograferade arten är funnen, resten silhuetter", (await found.count()) === 1 && (await page.locator(".fbcell.missing").count()) === 14);
+  check("den fotograferade arten är funnen, resten silhuetter", (await found.count()) === 1 && (await page.locator(".fbcell.missing").count()) === 15);
   await found.first().click();
   await page.locator(".thumb img").first().waitFor({ timeout: 5000 });
   await page.locator(".thumb").first().click();
@@ -169,7 +169,7 @@ try {
   await page.evaluate(() => new Promise((ok) => { const r = indexedDB.deleteDatabase("tiptoe"); r.onsuccess = r.onerror = r.onblocked = () => ok(null); }));
   await page.goto(base + "/");
   await page.getByTestId("stats").waitFor({ timeout: 10000 });
-  check("efter rensning är allt borta", /^.*0 poäng · 0 av 15 arter/.test(await page.getByTestId("stats").innerText()), await page.getByTestId("stats").innerText());
+  check("efter rensning är allt borta", /^.*0 poäng · 0 av 16 arter/.test(await page.getByTestId("stats").innerText()), await page.getByTestId("stats").innerText());
   await page.goto(base + "/settings/");
   await page.getByTestId("import-file").setInputFiles(zipPath);
   await page.getByTestId("import-summary").waitFor({ timeout: 10000 });

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ALL_SPECIES } from "@/engine/species";
 import { titleFor } from "@/engine/progress";
+import { dayPhase } from "@/engine/sun";
 import { Repo } from "@/storage/repo";
 import { exportReminder } from "@/storage/reminder";
 import { audio } from "./audio";
@@ -12,6 +13,12 @@ import { useLang, useT } from "./i18n";
 import { installPrompt, isIos, isStandalone } from "./install";
 import { Modal } from "./Modal";
 import { useSession, useWalkView } from "./SessionProvider";
+
+/** Startsidans bakgrund efter dygnets fas: gryning, dag, och skymning/natt. */
+export function homeBackground(tMs: number, lat = 60, lon = 15): string {
+  const p = dayPhase(tMs, lat, lon);
+  return p === "dawn" ? "/backgrounds/dawn.webp" : p === "day" ? "/backgrounds/day.webp" : "/backgrounds/night.webp";
+}
 
 /** Startskärmen: namnet, Starta promenad, (senare) fältdagbok och inställningar, och uppmaningen att installera före första promenaden. */
 export function Home() {
@@ -25,6 +32,9 @@ export function Home() {
   const [picker, setPicker] = useState(false);
   const { setLang } = useLang();
   const [remind, setRemind] = useState(false);
+  const [bg, setBg] = useState<string | null>(null);
+  // Bakgrund efter solens läge (mitt i Sverige; platsen är okänd på startsidan). Sätts efter hydreringen så att serverns HTML är densamma.
+  useEffect(() => { setBg(homeBackground(Date.now())); }, []);
   useEffect(() => {
     const pid = v?.profile?.id, db = ctx?.db;
     if (!pid || !db) return;
@@ -49,7 +59,7 @@ export function Home() {
   const start = () => (!standalone && !going ? setWarn(true) : void go());
 
   return (
-    <main className="home">
+    <main className="home" style={bg ? { backgroundImage: `linear-gradient(rgba(20,24,18,.35), rgba(20,24,18,.15) 35%, rgba(20,24,18,.88) 70%), url(${bg})` } : undefined}>
       <header className="homehead">
         <h1 className="title">{t("app.name")}</h1>
         <p className="sub">{t("app.subtitle")}</p>

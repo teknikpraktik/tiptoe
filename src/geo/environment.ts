@@ -11,7 +11,14 @@ import { tileRange } from "./blockers";
  */
 export type Habitat = "forest" | "wetland" | "park" | "grass" | "field" | "urban" | "open" | "water";
 
-export const ENV_LAYERS = new Set(["landcover", "landuse", "park", "water", "building", "transportation"]);
+export const ENV_LAYERS = new Set(["landcover", "landuse", "park", "water", "waterway", "building", "transportation"]);
+/** Vattendrag som räknas (åar, bäckar, kanaler). Diken räknas inte: de finns överallt i odlingslandskapet. Kulvertar (tunnel) räknas inte. */
+export const STREAM_CLASSES = new Set(["river", "stream", "canal"]);
+/**
+ * Säkerhet för barn: inget djur står, vandrar eller flyr närmare än så här till vatten eller ett vattendrag (öppet vatten eller is),
+ * så att ingen följer ett djur ner i vattnet. Samma gräns som vattenzonens inre kant.
+ */
+export const WATER_CLEARANCE_M = 12;
 /** Linjer man kan gå längs (spec: djur hålls inom 60 m från gångbara linjer). Större vägar är faror, inte gångvägar. */
 export const WALKABLE_CLASSES = new Set(["path", "track", "minor", "service", "pedestrian"]);
 export const ENV_ZOOM = 14;
@@ -22,12 +29,15 @@ export interface Environment {
   blocked(p: LatLon): boolean;
   /** Sträckan a–b går in i vatten eller en byggnad (exakt: ändpunkterna och skärning med polygonkanterna). */
   segmentBlocked(a: LatLon, b: LatLon): boolean;
-  /** Inom marginalen från större väg eller järnväg. */
+  /** Inom marginalen från större väg eller järnväg, eller närmare än `WATER_CLEARANCE_M` till vatten eller ett vattendrag. */
   hazard(p: LatLon): boolean;
   /** Avstånd (m) till närmaste gångbara linje, högst `maxM` (Infinity om ingen inom `maxM`). */
   walkableDistM(p: LatLon, maxM: number): number;
-  /** Avstånd (m) till närmaste vatten med minst `minAreaM2` yta (standard: allt vatten utom bassänger), högst `maxM`. */
-  waterDistM(p: LatLon, maxM: number, minAreaM2?: number): number;
+  /**
+   * Avstånd (m) till närmaste vatten med minst `minAreaM2` yta (standard: allt vatten utom bassänger), högst `maxM`. Hav räknas som
+   * obegränsat stort. Med `streams` räknas även åar och bäckar (linjer), oavsett storlek.
+   */
+  waterDistM(p: LatLon, maxM: number, minAreaM2?: number, streams?: boolean): number;
   /** Skog inom `r` m (skogsbryn och skydd vid flykt). */
   forestWithin(p: LatLon, r: number): boolean;
   /** Antal objekt (för diagnostik). */
@@ -63,7 +73,9 @@ function polyKind(f: MvtFeature): string | null {
 }
 
 function lineKind(f: MvtFeature): string | null {
-  if (f.layer !== "transportation" || f.props.brunnel === "tunnel") return null;
+  if (f.props.brunnel === "tunnel") return null;
+  if (f.layer === "waterway") return STREAM_CLASSES.has(String(f.props.class ?? "")) ? "stream" : null;
+  if (f.layer !== "transportation") return null;
   const c = String(f.props.class ?? "");
   if (c === "rail") return "rail";
   if (MAJOR_ROAD_CLASSES.includes(c)) return "major";
@@ -120,7 +132,7 @@ export function makeEnvironment(features: MvtFeature[]): Environment {
         if (!rings.length || rings[0].length < 3) continue;
         let s = 90, w = 180, n = -90, e = -180;
         for (const p of rings[0]) { s = Math.min(s, p.lat); n = Math.max(n, p.lat); w = Math.min(w, p.lon); e = Math.max(e, p.lon); }
-        addTo(polys, { kind, rings, s, w, n, e, areaM2: kind === "water" ? ringAreaM2(rings[0]) - rings.slice(1).reduce((a, h) => a + ringAreaM2(h), 0) : 0 });
+        addTo(polys, { kind, rings, s, w, n, e, areaM2: kind === "water" && f.props.class === "ocean" ? Infinity : kind === "water" ? ringAreaM2(rings[0]) - rings.slice(1).reduce((a, h) => a + ringAreaM2(h), 0) : 0 });
         size++;
       }
     } else {
@@ -160,7 +172,7 @@ export function makeEnvironment(features: MvtFeature[]): Environment {
     }
     return best <= maxM ? best : Infinity;
   };
-  const WALK = new Set(["walk"]), HAZ = new Set(["major", "rail"]);
+  const WALK = new Set(["walk"]), HAZ = new Set(["major", "rail"]), STREAM = new Set(["stream"]);
   const cross = (p1: LatLon, p2: LatLon, p3: LatLon, p4: LatLon) => {
     const d = (a: LatLon, b: LatLon, c: LatLon) => (c.lon - a.lon) * (b.lat - a.lat) - (b.lon - a.lon) * (c.lat - a.lat);
     const d1 = d(p3, p4, p1), d2 = d(p3, p4, p2), d3 = d(p1, p2, p3), d4 = d(p1, p2, p4);
@@ -185,9 +197,12 @@ export function makeEnvironment(features: MvtFeature[]): Environment {
       }
       return false;
     },
-    hazard(p) { return lineDist(p, HAZ, ROAD_CLEARANCE_M) <= ROAD_CLEARANCE_M; },
+    hazard(p) {
+      return lineDist(p, HAZ, ROAD_CLEARANCE_M) <= ROAD_CLEARANCE_M
+        || polyDist(p, "water", WATER_CLEARANCE_M) <= WATER_CLEARANCE_M || lineDist(p, STREAM, WATER_CLEARANCE_M) <= WATER_CLEARANCE_M;
+    },
     walkableDistM: (p, maxM) => lineDist(p, WALK, maxM),
-    waterDistM: (p, maxM, minAreaM2 = 0) => polyDist(p, "water", maxM, minAreaM2),
+    waterDistM: (p, maxM, minAreaM2 = 0, streams = false) => Math.min(polyDist(p, "water", maxM, minAreaM2), streams ? lineDist(p, STREAM, maxM) : Infinity),
     forestWithin: (p, r) => polyDist(p, "forest", r) <= r,
   };
 }
@@ -204,7 +219,7 @@ export async function loadEnvironment(center: LatLon, radiusM: number, fetchTile
   return makeEnvironment(feats);
 }
 
-/** Säker plats för ett djur (spec: Säkerhet för barn): inte i vatten/byggnad, inte nära större väg/järnväg, inom `maxWalkM` från gångbar linje. */
+/** Säker plats för ett djur (spec: Säkerhet för barn): inte i vatten/byggnad, inte nära större väg/järnväg eller vatten, inom `maxWalkM` från gångbar linje. */
 export function safeSpot(env: Environment, p: LatLon, maxWalkM = 60): boolean {
   return !env.blocked(p) && !env.hazard(p) && env.walkableDistM(p, maxWalkM) <= maxWalkM;
 }

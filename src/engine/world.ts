@@ -6,6 +6,7 @@ import { hash32, idOf } from "./hash";
 import { ALL_SPECIES, SPECIES, WATER_ZONE, inWaterZone, speciesWeight, type DayPhase, type Rarity, type SpeciesId, type WaterContext } from "./species";
 import { LEVELS, inside, type Level, type LevelIndex } from "./levels";
 import { dayPhase } from "./sun";
+import { isUpland } from "@/geo/regions";
 
 /**
  * Den delade, deterministiska världen (spec: Djur och spelvärld → Deterministisk värld). Ingen server: varje telefon räknar fram samma
@@ -68,8 +69,15 @@ export interface Candidate {
 
 /** Vattnet runt en plats för artvikterna (lat: räknas bara om en vattenart frågar). */
 export function waterAt(env: Environment, p: LatLon): WaterContext {
-  const memo = new Map<number, number>();
-  return { distToWater: (a) => { let d = memo.get(a); if (d === undefined) { d = env.waterDistM(p, WATER_ZONE.maxM + 1, a); memo.set(a, d); } return d; } };
+  const memo = new Map<string, number>();
+  return {
+    distToWater: (a, streams = false) => {
+      const k = `${a}:${streams}`;
+      let d = memo.get(k);
+      if (d === undefined) { d = env.waterDistM(p, WATER_ZONE.maxM + 1, a, streams); memo.set(k, d); }
+      return d;
+    },
+  };
 }
 
 const rng = (seed: number): RngHolder => ({ rngState: seed >>> 0 });
@@ -105,7 +113,7 @@ export function candidates(c: Cell, window: number, env: Environment): Candidate
 export function pickSpecies(r: RngHolder, env: Environment, home: LatLon, phase: DayPhase, level: Level, only?: Rarity[] | ((id: SpeciesId) => boolean)): { species: SpeciesId; variant?: string } | null {
   const hab = env.habitat(home);
   const forestNear = hab !== "forest" && env.forestWithin(home, 40);
-  const ctx = { habitat: hab, forestNear, water: waterAt(env, home), phase, level, rarityWeight: LEVELS.rarity[level] };
+  const ctx = { habitat: hab, forestNear, water: waterAt(env, home), phase, level, upland: isUpland(home), rarityWeight: LEVELS.rarity[level] };
   const allowed = (id: SpeciesId) => !only || (typeof only === "function" ? only(id) : only.includes(SPECIES[id].rarity));
   const weights = ALL_SPECIES.map((id) => (allowed(id) ? speciesWeight(SPECIES[id], ctx) : 0));
   const total = weights.reduce((a, x) => a + x, 0);
