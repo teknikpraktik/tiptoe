@@ -175,6 +175,8 @@ export function Walk() {
             <div className="result-line" data-testid="result">
               <span className="stars" aria-label={t("result.stars", { n: result.r.stars })}>{"★".repeat(result.r.stars)}{"☆".repeat(3 - result.r.stars)}</span>
               {result.r.newSpecies && <span className="chip good">{t("result.newSpecies")}</span>}
+              {result.r.variant && <span className="chip rare">{t("result.variant", { variant: t(`variant.${result.r.variant}` as "variant.dark") })}</span>}
+              {result.r.newTitle && <span className="chip good" data-testid="new-title">{t("result.newTitle", { title: t(`title.${result.r.newTitle}`) })}</span>}
               <span>{result.r.points ? t("result.points", { n: result.r.points }) : t("result.noPoints")}</span>
             </div>
           )}

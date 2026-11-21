@@ -21,6 +21,7 @@ import { SpeedTracker } from "@/sensors/speed";
 import { currentTempo, StepDetector } from "@/sensors/tempo";
 import { CHUNK_POINTS, type Observation, type Profile, type Repo, type WalkMeta } from "@/storage/repo";
 import { FieldLog, loadLog } from "./fieldlog";
+import { titleFor, type TitleId } from "@/engine/progress";
 import { SoundDirector, ambienceFor, type Ambience, type SoundCue } from "@/audio/director";
 
 export interface MotionSource {
@@ -95,7 +96,7 @@ export const LOOK_UP = { afterMs: 120_000, everyMs: 300_000 } as const;
 /** Väderstreck för en bäring (för observationer). */
 export const compassPoint = (deg: number): "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW" => (["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const)[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 
-export interface PhotoResult { stars: Rating["stars"]; rating: Rating; points: number; newSpecies: boolean; species: SpeciesId; photoId: string; observation: Observation | null }
+export interface PhotoResult { stars: Rating["stars"]; rating: Rating; points: number; newSpecies: boolean; species: SpeciesId; variant?: string; photoId: string; observation: Observation | null; newTitle: TitleId | null }
 
 const ENV_RADIUS_M = 900;
 const ENV_RELOAD_M = 500;
@@ -504,7 +505,7 @@ export class WalkSession {
     if (rating.stars > 0) {
       const already = this.observations.some((o) => o.animalId === a.id && o.stars > 0);
       points = already ? 0 : sp.points;
-      observation = { id: `o${this.id()}`, profileId: p.id, walkId: w.id, animalId: a.id, species: a.species, photoId, stars: rating.stars as 1 | 2 | 3, points, distM: Math.round(distM), tMs: this.now(), lat: a.pos.lat, lon: a.pos.lon };
+      observation = { id: `o${this.id()}`, profileId: p.id, walkId: w.id, animalId: a.id, species: a.species, ...(a.variant ? { variant: a.variant } : {}), photoId, stars: rating.stars as 1 | 2 | 3, points, distM: Math.round(distM), tMs: this.now(), lat: a.pos.lat, lon: a.pos.lon };
       this.observations.push(observation);
       await this.d.repo?.addObservation(observation);
       w.points += points;
@@ -513,9 +514,10 @@ export class WalkSession {
     const score = scoreFrom(this.observations);
     this.set({ score, walk: { ...w } });
     const newSpecies = !before.species.includes(a.species) && score.species.includes(a.species);
+    const tBefore = titleFor(before.species.length), tAfter = titleFor(score.species.length);
     this.log("photo_rated", { animalId, species: a.species, stars: rating.stars, distM: Math.round(distM), points, newSpecies });
     this.saveLog();
-    return { stars: rating.stars, rating, points, newSpecies, species: a.species, photoId, observation };
+    return { stars: rating.stars, rating, points, newSpecies, species: a.species, ...(a.variant ? { variant: a.variant } : {}), photoId, observation, newTitle: tAfter !== tBefore ? tAfter : null };
   }
 
   /** För fältdiagnostik och e2e. */

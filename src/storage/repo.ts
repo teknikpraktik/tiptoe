@@ -40,6 +40,8 @@ export interface Observation {
   walkId: string;
   animalId: string;
   species: SpeciesId;
+  /** Sällsynt utseende (spec: Varianter). */
+  variant?: string;
   photoId: string;
   stars: 1 | 2 | 3;
   /** Poäng som fotot gav (0 om individen redan var fotograferad). Totalen räknas alltid om, se `scoring.ts`. */
@@ -110,4 +112,5 @@ export class Repo {
   async observations(profileId: string): Promise<Observation[]> { return this.db.store<Observation>("observations").range(`${profileId}:`); }
   async savePhoto(p: StoredPhoto): Promise<void> { await this.db.store<StoredPhoto>("photos").put(p.id, p); }
   async photo(id: string): Promise<StoredPhoto | undefined> { return this.db.store<StoredPhoto>("photos").get(id); }
+  async profile(id: string): Promise<Profile | undefined> { return this.db.store<Profile>("profiles").get(id); }
 }

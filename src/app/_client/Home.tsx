@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ALL_SPECIES } from "@/engine/species";
+import { titleFor } from "@/engine/progress";
 import { audio } from "./audio";
 import { useT } from "./i18n";
 import { installPrompt, isIos, isStandalone } from "./install";
@@ -50,10 +51,10 @@ export function Home() {
           </div>
         )}
         {v && v.storage === "ok" && (
-          <p className="muted center" data-testid="stats">{t("home.stats", { points: v.score.total, species: v.score.species.length, total: ALL_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
+          <p className="muted center" data-testid="stats"><b>{t(`title.${titleFor(v.score.species.length)}`)}</b> · {t("home.stats", { points: v.score.total, species: v.score.species.length, total: ALL_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
         )}
         <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{going ? t("walk.resume") : t("home.startWalk")}</button>
-        <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.fieldbook")}</button>
+        <Link className="btn ghost" href="/fieldbook" data-testid="home-fieldbook">{t("home.fieldbook")}</Link>
         <button className="btn ghost" disabled title={t("home.comingSoon")}>{t("home.settings")}</button>
         <div className="tests">
           <span className="muted">{t("home.tests")}</span>

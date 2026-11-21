@@ -113,6 +113,20 @@ try {
   await page.goto(base + "/");
   const stats = await page.getByTestId("stats").innerText({ timeout: 5000 });
   check("startsidan visar poäng och areal", /poäng/.test(stats) && /ha reservat/.test(stats), stats);
+  // Fältdagboken: arten är funnen, fotot går att öppna i stort format.
+  await page.getByTestId("home-fieldbook").click();
+  await page.waitForURL("**/fieldbook/");
+  await page.waitForFunction(() => /1\/15/.test(document.querySelector('[data-testid="fieldbook-head"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
+  const head = await page.getByTestId("fieldbook-head").innerText({ timeout: 5000 });
+  check("fältdagboken räknar arter och visar titel", /1\/15 arter/.test(head) && /Nykomling/.test(head), head.replace(/\n/g, " "));
+  const found = page.locator(".fbcell.found");
+  check("den fotograferade arten är funnen, resten silhuetter", (await found.count()) === 1 && (await page.locator(".fbcell.missing").count()) === 14);
+  await found.first().click();
+  await page.locator(".thumb img").first().waitFor({ timeout: 5000 });
+  await page.locator(".thumb").first().click();
+  await page.locator(".modal .photo").waitFor({ timeout: 5000 });
+  check("fotot öppnas i stort format", true);
+  await page.screenshot({ path: `${OUT}/06-fieldbook.png` });
   // Fälttestsidan: diagnostik och promenadens logg.
   await page.goto(base + "/field/");
   await page.getByTestId("log").first().waitFor({ timeout: 5000 });
