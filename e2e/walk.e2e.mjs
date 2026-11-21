@@ -5,9 +5,14 @@ import { destPoint } from "./geo.mjs";
 import { setup, START } from "./lib.mjs";
 
 const OUT = process.env.E2E_OUT ?? "e2e/out/walk";
-const { base, ctx, page, check, done } = await setup({ out: OUT, init: () => { try { localStorage.setItem("tiptoe.debug", "on"); } catch {} } });
+// Webbläsarens egen platsbevakning stängs av: all GPS kommer via injektionen med den simulerade klockan (annars blandas två klockor).
+const { base, ctx, page, check, done } = await setup({ out: OUT, init: () => {
+  try { localStorage.setItem("tiptoe.debug", "on"); } catch {}
+  try { navigator.geolocation.watchPosition = () => 0; navigator.geolocation.clearWatch = () => undefined; } catch {}
+} });
 
-const T0 = Date.now();
+// Fast simulerad starttid (dagtid i juni): samma tidsfönster och djur vid varje körning, så att testet är reproducerbart.
+const T0 = Date.UTC(2026, 5, 1, 8, 0, 0);
 const clock = () => page.evaluate((t) => { window.__simT = t; window.__tiptoe.useClock(() => window.__simT); }, T0);
 /** Ett steg: flytta simulerad tid `ms` framåt och mata en fix. */
 const fix = (p, ms = 1000) => page.evaluate(([p, ms]) => {
