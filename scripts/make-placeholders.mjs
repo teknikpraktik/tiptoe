@@ -1,6 +1,6 @@
 // Platshållarutklipp per art (3 vinklar × 2 poser), tydligt märkta. Ersätts av riktiga bilder genom att byta filer och public/animals/manifest.json.
 // Kör: node scripts/make-placeholders.mjs (kräver Chromium för att rendera SVG till PNG med transparent bakgrund).
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 
 // Form per art: kroppens längd/höjd, benlängd, halslängd, huvud, öron, svans, färger och särdrag. Enheter i en 600 × 400-ruta.
@@ -107,8 +107,11 @@ const svg = (id, view, pose) => {
 mkdirSync("public/animals/placeholder", { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium" });
 const page = await browser.newPage({ viewport: { width: 600, height: 400 } });
-const manifest = { version: 1, note: "Platshållare (egen grafik, fri att använda). Byt fil och post per art när riktiga bilder med licens finns.", species: {} };
+// Riktiga bilder (placeholder: false) i manifestet behålls; bara platshållarna skrivs om.
+const existing = existsSync("public/animals/manifest.json") ? JSON.parse(readFileSync("public/animals/manifest.json", "utf8")) : null;
+const manifest = existing ?? { version: 1, note: "Platshållare (egen grafik, fri att använda). Byt fil och post per art när riktiga bilder med licens finns.", species: {} };
 for (const id of Object.keys(S)) {
+  if (manifest.species[id] && manifest.species[id].placeholder === false) continue;
   const views = {};
   for (const view of ["side", "front", "back"]) {
     views[view] = {};

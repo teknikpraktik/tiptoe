@@ -1,78 +1,132 @@
 {
- "version": 1,
- "note": "Platshållare (egen grafik, fri att använda). Byt fil och post per art när riktiga bilder med licens finns.",
+ "version": 2,
+ "note": "Riktiga bilder där placeholder=false; övriga är platshållare. Licens per art. Bakifrån saknas i arken (sidan används).",
  "species": {
   "squirrel": {
    "views": {
     "side": {
      "calm": {
-      "src": "/animals/placeholder/squirrel-side-calm.png",
-      "aspect": 1.386
+      "src": "/animals/squirrel/side-stand.webp",
+      "aspect": 1.183
      },
      "alert": {
-      "src": "/animals/placeholder/squirrel-side-alert.png",
-      "aspect": 1.386
+      "src": "/animals/squirrel/side-stand.webp",
+      "aspect": 1.183
+     },
+     "rest": {
+      "src": "/animals/squirrel/side-lie.webp",
+      "aspect": 0.981
+     }
+    },
+    "quarter": {
+     "calm": {
+      "src": "/animals/squirrel/quarter-stand.webp",
+      "aspect": 0.989
+     },
+     "alert": {
+      "src": "/animals/squirrel/quarter-stand.webp",
+      "aspect": 0.989
+     },
+     "rest": {
+      "src": "/animals/squirrel/quarter-lie.webp",
+      "aspect": 0.902
      }
     },
     "front": {
      "calm": {
-      "src": "/animals/placeholder/squirrel-front-calm.png",
-      "aspect": 0.839
+      "src": "/animals/squirrel/front-stand.webp",
+      "aspect": 0.559
      },
      "alert": {
-      "src": "/animals/placeholder/squirrel-front-alert.png",
-      "aspect": 0.566
+      "src": "/animals/squirrel/front-stand.webp",
+      "aspect": 0.559
+     },
+     "rest": {
+      "src": "/animals/squirrel/front-lie.webp",
+      "aspect": 0.618
      }
     },
     "back": {
      "calm": {
-      "src": "/animals/placeholder/squirrel-back-calm.png",
-      "aspect": 0.757
+      "src": "/animals/squirrel/side-stand.webp",
+      "aspect": 1.183
      },
      "alert": {
-      "src": "/animals/placeholder/squirrel-back-alert.png",
-      "aspect": 0.583
+      "src": "/animals/squirrel/side-stand.webp",
+      "aspect": 1.183
+     },
+     "rest": {
+      "src": "/animals/squirrel/side-lie.webp",
+      "aspect": 0.981
      }
     }
    },
-   "license": "placeholder (egen, fri)",
-   "placeholder": true
+   "license": "Levererad av Per 2026-11-21 (AI-genererad). Licensvillkor för kommersiellt bruk ska dokumenteras här.",
+   "placeholder": false,
+   "source": "sheet 3×2: sida, trekvart, framifrån × stående, liggande"
   },
   "hare": {
    "views": {
     "side": {
      "calm": {
-      "src": "/animals/placeholder/hare-side-calm.png",
-      "aspect": 1.454
+      "src": "/animals/hare/side-stand.webp",
+      "aspect": 0.864
      },
      "alert": {
-      "src": "/animals/placeholder/hare-side-alert.png",
-      "aspect": 0.949
+      "src": "/animals/hare/side-stand.webp",
+      "aspect": 0.864
+     },
+     "rest": {
+      "src": "/animals/hare/side-lie.webp",
+      "aspect": 1.258
+     }
+    },
+    "quarter": {
+     "calm": {
+      "src": "/animals/hare/quarter-stand.webp",
+      "aspect": 0.791
+     },
+     "alert": {
+      "src": "/animals/hare/quarter-stand.webp",
+      "aspect": 0.791
+     },
+     "rest": {
+      "src": "/animals/hare/quarter-lie.webp",
+      "aspect": 1.244
      }
     },
     "front": {
      "calm": {
-      "src": "/animals/placeholder/hare-front-calm.png",
-      "aspect": 0.78
+      "src": "/animals/hare/front-stand.webp",
+      "aspect": 0.367
      },
      "alert": {
-      "src": "/animals/placeholder/hare-front-alert.png",
-      "aspect": 0.57
+      "src": "/animals/hare/front-stand.webp",
+      "aspect": 0.367
+     },
+     "rest": {
+      "src": "/animals/hare/front-lie.webp",
+      "aspect": 0.83
      }
     },
     "back": {
      "calm": {
-      "src": "/animals/placeholder/hare-back-calm.png",
-      "aspect": 0.539
+      "src": "/animals/hare/side-stand.webp",
+      "aspect": 0.864
      },
      "alert": {
-      "src": "/animals/placeholder/hare-back-alert.png",
-      "aspect": 0.44
+      "src": "/animals/hare/side-stand.webp",
+      "aspect": 0.864
+     },
+     "rest": {
+      "src": "/animals/hare/side-lie.webp",
+      "aspect": 1.258
      }
     }
    },
-   "license": "placeholder (egen, fri)",
-   "placeholder": true
+   "license": "Levererad av Per 2026-11-21 (AI-genererad). Licensvillkor för kommersiellt bruk ska dokumenteras här.",
+   "placeholder": false,
+   "source": "sheet 3×2: sida, trekvart, framifrån × stående, liggande"
   },
   "roe_deer": {
    "views": {
@@ -114,109 +168,190 @@
    "views": {
     "side": {
      "calm": {
-      "src": "/animals/placeholder/red_fox-side-calm.png",
-      "aspect": 2.732
+      "src": "/animals/red_fox/side-stand.webp",
+      "aspect": 1.177
      },
      "alert": {
-      "src": "/animals/placeholder/red_fox-side-alert.png",
-      "aspect": 1.657
+      "src": "/animals/red_fox/side-stand.webp",
+      "aspect": 1.177
+     },
+     "rest": {
+      "src": "/animals/red_fox/side-lie.webp",
+      "aspect": 1.423
+     }
+    },
+    "quarter": {
+     "calm": {
+      "src": "/animals/red_fox/quarter-stand.webp",
+      "aspect": 1.162
+     },
+     "alert": {
+      "src": "/animals/red_fox/quarter-stand.webp",
+      "aspect": 1.162
+     },
+     "rest": {
+      "src": "/animals/red_fox/quarter-lie.webp",
+      "aspect": 1.412
      }
     },
     "front": {
      "calm": {
-      "src": "/animals/placeholder/red_fox-front-calm.png",
+      "src": "/animals/red_fox/front-stand.webp",
       "aspect": 0.621
      },
      "alert": {
-      "src": "/animals/placeholder/red_fox-front-alert.png",
-      "aspect": 0.427
+      "src": "/animals/red_fox/front-stand.webp",
+      "aspect": 0.621
+     },
+     "rest": {
+      "src": "/animals/red_fox/front-lie.webp",
+      "aspect": 1.058
      }
     },
     "back": {
      "calm": {
-      "src": "/animals/placeholder/red_fox-back-calm.png",
-      "aspect": 0.528
+      "src": "/animals/red_fox/side-stand.webp",
+      "aspect": 1.177
      },
      "alert": {
-      "src": "/animals/placeholder/red_fox-back-alert.png",
-      "aspect": 0.406
+      "src": "/animals/red_fox/side-stand.webp",
+      "aspect": 1.177
+     },
+     "rest": {
+      "src": "/animals/red_fox/side-lie.webp",
+      "aspect": 1.423
      }
     }
    },
-   "license": "placeholder (egen, fri)",
-   "placeholder": true
+   "license": "Levererad av Per 2026-11-21 (AI-genererad). Licensvillkor för kommersiellt bruk ska dokumenteras här.",
+   "placeholder": false,
+   "source": "sheet 3×2: sida, trekvart, framifrån × stående, liggande"
   },
   "hedgehog": {
    "views": {
     "side": {
      "calm": {
-      "src": "/animals/placeholder/hedgehog-side-calm.png",
-      "aspect": 1.681
+      "src": "/animals/hedgehog/side-stand.webp",
+      "aspect": 1.447
      },
      "alert": {
-      "src": "/animals/placeholder/hedgehog-side-alert.png",
-      "aspect": 1.549
+      "src": "/animals/hedgehog/side-stand.webp",
+      "aspect": 1.447
+     },
+     "rest": {
+      "src": "/animals/hedgehog/side-lie.webp",
+      "aspect": 1.654
+     }
+    },
+    "quarter": {
+     "calm": {
+      "src": "/animals/hedgehog/quarter-stand.webp",
+      "aspect": 1.223
+     },
+     "alert": {
+      "src": "/animals/hedgehog/quarter-stand.webp",
+      "aspect": 1.223
+     },
+     "rest": {
+      "src": "/animals/hedgehog/quarter-lie.webp",
+      "aspect": 1.394
      }
     },
     "front": {
      "calm": {
-      "src": "/animals/placeholder/hedgehog-front-calm.png",
-      "aspect": 0.963
+      "src": "/animals/hedgehog/front-stand.webp",
+      "aspect": 0.916
      },
      "alert": {
-      "src": "/animals/placeholder/hedgehog-front-alert.png",
-      "aspect": 0.746
+      "src": "/animals/hedgehog/front-stand.webp",
+      "aspect": 0.916
+     },
+     "rest": {
+      "src": "/animals/hedgehog/front-lie.webp",
+      "aspect": 1.265
      }
     },
     "back": {
      "calm": {
-      "src": "/animals/placeholder/hedgehog-back-calm.png",
-      "aspect": 0.963
+      "src": "/animals/hedgehog/side-stand.webp",
+      "aspect": 1.447
      },
      "alert": {
-      "src": "/animals/placeholder/hedgehog-back-alert.png",
-      "aspect": 0.77
+      "src": "/animals/hedgehog/side-stand.webp",
+      "aspect": 1.447
+     },
+     "rest": {
+      "src": "/animals/hedgehog/side-lie.webp",
+      "aspect": 1.654
      }
     }
    },
-   "license": "placeholder (egen, fri)",
-   "placeholder": true
+   "license": "Levererad av Per 2026-11-21 (AI-genererad). Licensvillkor för kommersiellt bruk ska dokumenteras här.",
+   "placeholder": false,
+   "source": "sheet 3×2: sida, trekvart, framifrån × stående, liggande"
   },
   "badger": {
    "views": {
     "side": {
      "calm": {
-      "src": "/animals/placeholder/badger-side-calm.png",
-      "aspect": 2.478
+      "src": "/animals/badger/side-stand.webp",
+      "aspect": 1.655
      },
      "alert": {
-      "src": "/animals/placeholder/badger-side-alert.png",
-      "aspect": 1.709
+      "src": "/animals/badger/side-stand.webp",
+      "aspect": 1.655
+     },
+     "rest": {
+      "src": "/animals/badger/side-lie.webp",
+      "aspect": 2.262
+     }
+    },
+    "quarter": {
+     "calm": {
+      "src": "/animals/badger/quarter-stand.webp",
+      "aspect": 1.244
+     },
+     "alert": {
+      "src": "/animals/badger/quarter-stand.webp",
+      "aspect": 1.244
+     },
+     "rest": {
+      "src": "/animals/badger/quarter-lie.webp",
+      "aspect": 1.707
      }
     },
     "front": {
      "calm": {
-      "src": "/animals/placeholder/badger-front-calm.png",
-      "aspect": 0.803
+      "src": "/animals/badger/front-stand.webp",
+      "aspect": 0.775
      },
      "alert": {
-      "src": "/animals/placeholder/badger-front-alert.png",
-      "aspect": 0.581
+      "src": "/animals/badger/front-stand.webp",
+      "aspect": 0.775
+     },
+     "rest": {
+      "src": "/animals/badger/front-lie.webp",
+      "aspect": 1.507
      }
     },
     "back": {
      "calm": {
-      "src": "/animals/placeholder/badger-back-calm.png",
-      "aspect": 0.748
+      "src": "/animals/badger/side-stand.webp",
+      "aspect": 1.655
      },
      "alert": {
-      "src": "/animals/placeholder/badger-back-alert.png",
-      "aspect": 0.599
+      "src": "/animals/badger/side-stand.webp",
+      "aspect": 1.655
+     },
+     "rest": {
+      "src": "/animals/badger/side-lie.webp",
+      "aspect": 2.262
      }
     }
    },
-   "license": "placeholder (egen, fri)",
-   "placeholder": true
+   "license": "Levererad av Per 2026-11-21 (AI-genererad). Licensvillkor för kommersiellt bruk ska dokumenteras här.",
+   "placeholder": false,
+   "source": "sheet 3×2: sida, trekvart, framifrån × stående, liggande"
   },
   "beaver": {
    "views": {
@@ -258,37 +393,64 @@
    "views": {
     "side": {
      "calm": {
-      "src": "/animals/placeholder/wild_boar-side-calm.png",
-      "aspect": 1.986
+      "src": "/animals/wild_boar/side-stand.webp",
+      "aspect": 1.479
      },
      "alert": {
-      "src": "/animals/placeholder/wild_boar-side-alert.png",
-      "aspect": 1.383
+      "src": "/animals/wild_boar/side-stand.webp",
+      "aspect": 1.479
+     },
+     "rest": {
+      "src": "/animals/wild_boar/side-lie.webp",
+      "aspect": 2.027
+     }
+    },
+    "quarter": {
+     "calm": {
+      "src": "/animals/wild_boar/quarter-stand.webp",
+      "aspect": 1.077
+     },
+     "alert": {
+      "src": "/animals/wild_boar/quarter-stand.webp",
+      "aspect": 1.077
+     },
+     "rest": {
+      "src": "/animals/wild_boar/quarter-lie.webp",
+      "aspect": 1.466
      }
     },
     "front": {
      "calm": {
-      "src": "/animals/placeholder/wild_boar-front-calm.png",
-      "aspect": 0.745
+      "src": "/animals/wild_boar/front-stand.webp",
+      "aspect": 0.607
      },
      "alert": {
-      "src": "/animals/placeholder/wild_boar-front-alert.png",
-      "aspect": 0.55
+      "src": "/animals/wild_boar/front-stand.webp",
+      "aspect": 0.607
+     },
+     "rest": {
+      "src": "/animals/wild_boar/front-lie.webp",
+      "aspect": 1.147
      }
     },
     "back": {
      "calm": {
-      "src": "/animals/placeholder/wild_boar-back-calm.png",
-      "aspect": 0.69
+      "src": "/animals/wild_boar/side-stand.webp",
+      "aspect": 1.479
      },
      "alert": {
-      "src": "/animals/placeholder/wild_boar-back-alert.png",
-      "aspect": 0.566
+      "src": "/animals/wild_boar/side-stand.webp",
+      "aspect": 1.479
+     },
+     "rest": {
+      "src": "/animals/wild_boar/side-lie.webp",
+      "aspect": 2.027
      }
     }
    },
-   "license": "placeholder (egen, fri)",
-   "placeholder": true
+   "license": "Levererad av Per 2026-11-21 (AI-genererad). Licensvillkor för kommersiellt bruk ska dokumenteras här.",
+   "placeholder": false,
+   "source": "sheet 3×2: sida, trekvart, framifrån × stående, liggande"
   },
   "moose": {
    "views": {
