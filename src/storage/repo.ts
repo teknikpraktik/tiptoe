@@ -88,6 +88,9 @@ export class Repo {
     return np;
   }
   async setActiveProfile(id: string): Promise<void> { await this.db.store("meta").put("activeProfile", id); }
+  /** Senaste export (ms) för profilen, för exportpåminnelsen. */
+  async lastExport(profileId: string): Promise<number | null> { return (await this.db.store<number>("meta").get(`lastExport:${profileId}`)) ?? null; }
+  async setLastExport(profileId: string, t: number): Promise<void> { await this.db.store("meta").put(`lastExport:${profileId}`, t); }
 
   /** Ny profil (spec: flera lokala profiler per telefon, utan inloggning). Barnprofiler får hemområde 1 km som standard. */
   async createProfile(name: string, kind: Profile["kind"], lang: Lang, now = Date.now()): Promise<Profile> {
