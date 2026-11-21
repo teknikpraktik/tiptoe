@@ -22,9 +22,9 @@ function sample(x0: number, x1: number, y0: number, y1: number, windows: number[
 }
 const count = (cs: Candidate[], s: SpeciesId) => cs.filter((c) => c.species === s).length;
 
-describe("15 arter enligt specen", () => {
+describe("specens 15 arter och renen", () => {
   it("alla arter har klass, poäng och rimliga värden", () => {
-    expect(ALL_SPECIES).toHaveLength(15);
+    expect(ALL_SPECIES).toHaveLength(16);
     for (const id of ALL_SPECIES) {
       const s = SPECIES[id];
       expect(s.points).toBe({ common: 50, uncommon: 100, rare: 250, very_rare: 1000 }[s.rarity]);

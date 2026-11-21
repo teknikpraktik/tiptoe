@@ -12,3 +12,8 @@ Fattade beslut efter fas 1. Specen (`docs/SPEC.md`) gäller där inget annat st�
 | 2026-11-20 | Djurbilder | Tydligt märkta platshållare per art tills AI-bilder med licens finns. | Bildmanifest per art, så att riktiga bilder byts in utan kodändring. |
 | 2026-11-20 | Ljud | Syntetiskt med WebAudio. | Inga ljudfiler eller licenser; kan bytas mot inspelningar senare. |
 | 2026-11-20 | Leverans | Staplade PR:er; Claude mergar när CI och Vercels förhandsdeploy är gröna. | Per granskar i efterhand. |
+| 2026-11-21 | Djurbilder | Riktiga utklipp från Per (AI-genererade) ersätter platshållarna art för art. | Licensvillkoren för kommersiellt bruk ska dokumenteras i manifestet. |
+| 2026-11-21 | Kamera | Telezoomen tar hänsyn till djurets storlek: djuret fyller ungefär 28 % av bildhöjden, 1–5×. Vertikalt siktstöd i tele. | Små djur syns bättre; vid 5× är synfältet 10°, så siktet är känsligare (fälttest). |
+| 2026-11-21 | Livsmiljöer | Djur bara i sina hemmamiljöer, generöst tolkat. Bäver och utter vid åar, bäckar och sjöar; havsörn vid kusten eller sjöar ≥ 50 ha; varg, björn och lodjur i skog i hela landet. | Vattendrag (OpenMapTiles `waterway`) läses in. Varg och björn kräver fortfarande reservatsnivå 3. |
+| 2026-11-21 | Säkerhet för barn | Inget djur står, vandrar eller flyr närmare än 12 m till vatten eller ett vattendrag (öppet vatten eller is). | Gäller alla arter, spår och flyktvägar. Diken och kulvertar räknas inte. |
+| 2026-11-21 | Arter | Ren tillagd som 16:e art (utöver specen), bara i höglänt terräng: fjällen, Härjedalen, Jämtland, norra Dalarna och Värmland (Sälen, Idre, Branäs). | Ingen höjddata i tilesen: grov region (`src/geo/regions.ts`). Mästerranger kräver fortfarande specens 15 arter; renen är en bonusart. |

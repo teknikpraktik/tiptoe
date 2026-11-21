@@ -32,7 +32,7 @@ export const AUDIO = {
 
 /** Närhetsljud per art: varningsläte för rådjur (skall), skrik för räv, kvitter för ekorre, grymtning för vildsvin, annars prassel/kvist. */
 const PROXIMITY: Partial<Record<SpeciesId, SoundKind>> = {
-  roe_deer: "call", red_fox: "call", squirrel: "chatter", wild_boar: "grunt", capercaillie: "hoot", white_tailed_eagle: "hoot", moose: "twig", brown_bear: "twig",
+  roe_deer: "call", red_fox: "call", squirrel: "chatter", wild_boar: "grunt", capercaillie: "hoot", white_tailed_eagle: "hoot", moose: "twig", brown_bear: "twig", reindeer: "grunt",
 };
 
 /** Panorering ur djurets bäring relativt den riktning spelaren tittar (null = okänd riktning: mitten). */

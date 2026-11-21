@@ -9,7 +9,8 @@ export const TITLES = [
   { id: "tracker", species: 3 },
   { id: "ranger", species: 8 },
   { id: "senior_ranger", species: 12 },
-  { id: "master_ranger", species: ALL_SPECIES.length },
+  // Specens 15 arter. Renen (bara i fjällen) är en bonusart: ingen ska behöva resa för den högsta titeln.
+  { id: "master_ranger", species: 15 },
 ] as const;
 export type TitleId = (typeof TITLES)[number]["id"];
 

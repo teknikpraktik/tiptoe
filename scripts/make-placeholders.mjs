@@ -19,6 +19,7 @@ const S = {
   lynx: { c: "#b08a5e", d: "#4a3826", l: "#efe2cb", body: [260, 110], leg: 120, neck: 30, head: 70, ear: 35, tail: "stub", tufts: true, spots: true },
   wolf: { c: "#8a857c", d: "#4a4640", l: "#e3ded4", body: [300, 120], leg: 130, neck: 50, head: 80, ear: 32, tail: "long" },
   brown_bear: { c: "#5b3d22", d: "#3a2614", l: "#8a6a4a", body: [340, 190], leg: 110, neck: 20, head: 100, ear: 22, tail: "none" },
+  reindeer: { c: "#7a6a58", d: "#4a3e32", l: "#e8e0d2", body: [300, 130], leg: 130, neck: 60, head: 80, ear: 25, tail: "short", antler: true },
   white_tailed_eagle: { bird: true, eagle: true, c: "#5b4632", d: "#33271c", l: "#f2efe6", body: [170, 210], leg: 30, head: 55, tail: "white" },
 };
 

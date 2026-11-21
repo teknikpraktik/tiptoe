@@ -15,9 +15,21 @@ export interface CameraModel {
 export const DEFAULT_CAMERA: CameraModel = { hfovDeg: 50, vfovDeg: 66 };
 export const EYE_HEIGHT_M = 1.4;
 
-/** Teleobjektivets zoom ur avståndet (spec: avståndet styr zoomen). 1× nära, upp till 4× på långt håll. */
-export function teleZoom(distM: number): number {
-  return Math.max(1, Math.min(4, distM / 8));
+/** Teleobjektivets största zoom. Högre zoom ger få källpixlar i bakgrunden och gör djuret svårt att hålla i bild. */
+export const MAX_TELE_ZOOM = 5;
+/** Den andel av bildhöjden som teleobjektivet försöker fylla med djuret. */
+export const TELE_FILL = 0.28;
+
+/**
+ * Teleobjektivets zoom ur avståndet och djurets storlek (spec: avståndet styr zoomen). Zoomen väljs så att djuret fyller ungefär
+ * `TELE_FILL` av bildhöjden, mellan 1× och `MAX_TELE_ZOOM`. Små djur (ekorre, igelkott) får alltså mer zoom än en älg på samma avstånd;
+ * på långt håll slår taket till och djuret blir mindre, så avståndet syns fortfarande i bilden.
+ */
+export function teleZoom(distM: number, heightM = 1, camera: CameraModel = DEFAULT_CAMERA): number {
+  // Samma modell som placeAnimal: heightFrac = höjd / avstånd / (2·tan(vfov / 2z)).
+  const halfDeg = Math.atan(Math.max(0.05, heightM) / (2 * TELE_FILL * Math.max(0.1, distM))) * (180 / Math.PI);
+  const z = camera.vfovDeg / (2 * halfDeg);
+  return Math.max(1, Math.min(MAX_TELE_ZOOM, z));
 }
 
 /**
@@ -57,7 +69,9 @@ export function placeAnimal(o: {
   const tanH = Math.tan((h / 2) * (Math.PI / 180)), tanV = Math.tan((v / 2) * (Math.PI / 180));
   const offRad = (off * Math.PI) / 180;
   const x = Math.abs(off) >= 89 ? (off < 0 ? -10 : 10) : 0.5 + Math.tan(offRad) / (2 * tanH);
-  const footElev = -Math.atan2(eye, o.distM) * (180 / Math.PI);
+  // Siktstöd i tele: fötternas vinkel under horisonten dämpas med zoomen, annars hamnar ett nära djur under bildkanten när telefonen hålls
+  // vågrätt (8° nedåt på 10 m, men bara ±5° synfält vid 6×). Telefonens egen lutning verkar fullt ut. Vid 1× är bilden geometriskt riktig.
+  const footElev = (-Math.atan2(eye, o.distM) * (180 / Math.PI)) / o.zoom;
   const rel = ((footElev - o.cameraPitchDeg) * Math.PI) / 180;
   const y = 0.5 - Math.tan(rel) / (2 * tanV) + (o.verticalNudge ?? 0);
   const heightFrac = o.animalHeightM / o.distM / (2 * tanV);

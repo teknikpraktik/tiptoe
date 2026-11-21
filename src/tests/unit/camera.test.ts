@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AnchoredYaw, cameraYawPitch } from "@/sensors/orientation";
 import { headingFromOrientation } from "@/sensors/compass";
-import { distanceQuality, placeAnimal, teleZoom, viewFor } from "@/camera/projection";
+import { distanceQuality, MAX_TELE_ZOOM, placeAnimal, TELE_FILL, teleZoom, viewFor } from "@/camera/projection";
 import { wrap180 } from "@/sensors/heading";
 
 describe("kamerans riktning ur orienteringen", () => {
@@ -85,9 +85,19 @@ describe("placering i bilden", () => {
     expect(placeAnimal({ ...base, bearingDeg: 0, cameraYawDeg: 0, verticalNudge: -0.1 }).y).toBeCloseTo(flat.y - 0.1, 6);
   });
   it("zoom och kvalitet ur avståndet", () => {
-    expect(teleZoom(5)).toBe(1);
-    expect(teleZoom(24)).toBe(3);
-    expect(teleZoom(100)).toBe(4);
+    expect(teleZoom(2, 1)).toBe(1);
+    expect(teleZoom(200, 1)).toBe(MAX_TELE_ZOOM);
+    // Djuret fyller ungefär TELE_FILL av bildhöjden när zoomen inte slår i taket.
+    for (const [d, h] of [[20, 1.9], [5, 0.35], [3, 0.25]] as const) {
+      const pl = placeAnimal({ ...base, bearingDeg: 0, cameraYawDeg: 0, distM: d, animalHeightM: h, zoom: teleZoom(d, h) });
+      expect(pl.heightFrac).toBeGreaterThan(TELE_FILL * 0.85);
+      expect(pl.heightFrac).toBeLessThan(TELE_FILL * 1.15);
+    }
+    // Ett litet djur får mer zoom än ett stort på samma avstånd, och zoomen växer med avståndet.
+    expect(teleZoom(12, 0.25)).toBeGreaterThan(teleZoom(12, 1.9));
+    expect(teleZoom(30, 1.9)).toBeGreaterThan(teleZoom(15, 1.9));
+    // Siktstöd: en ekorre 4–15 m bort syns hel när telefonen hålls vågrätt och riktas mot den.
+    for (const d of [4, 8, 15]) expect(placeAnimal({ ...base, bearingDeg: 0, cameraYawDeg: 0, distM: d, animalHeightM: 0.25, zoom: teleZoom(d, 0.25) }).inFrame, String(d)).toBe(true);
     expect(distanceQuality(10, 30)).toBe(1);
     expect(distanceQuality(30, 30)).toBe(0);
     expect(distanceQuality(22.5, 30)).toBeCloseTo(0.5, 6);

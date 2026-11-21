@@ -1,4 +1,4 @@
-import type { Habitat } from "@/geo/environment";
+import { WATER_CLEARANCE_M, type Habitat } from "@/geo/environment";
 
 /**
  * Artdata (spec: Djur och spelvärld → Arter, startvärden). Alla värden är konfigurerbara startvärden som justeras efter fälttest.
@@ -8,7 +8,8 @@ export type SpeciesId =
   | "squirrel" | "hare" | "roe_deer" | "red_fox" | "hedgehog"
   | "badger" | "beaver" | "wild_boar" | "moose"
   | "capercaillie" | "otter" | "lynx"
-  | "wolf" | "brown_bear" | "white_tailed_eagle";
+  | "wolf" | "brown_bear" | "white_tailed_eagle"
+  | "reindeer";
 export type Rarity = "common" | "uncommon" | "rare" | "very_rare";
 export type DayPhase = "dawn" | "day" | "dusk" | "night";
 /** Hur djuret flyr: springer, dyker undan i vatten (utter, bäver) eller lyfter (fåglar). */
@@ -28,8 +29,12 @@ export interface Species {
   needs?: {
     /** Bara i vattenzonen: på land 12–100 m från större vatten. */
     waterZone?: boolean;
-    /** Minsta vattenyta (m²) som räknas som "större vatten" för arten. */
+    /** Minsta vattenyta (m²) som räknas som "större vatten" för arten. Hav räknas alltid. */
     waterAreaM2?: number;
+    /** Åar och bäckar räknas också som vatten för vattenzonen (bäver, utter). */
+    streams?: boolean;
+    /** Bara i höglänt terräng (fjällen och de högre delarna av norra Dalarna och Värmland), se `geo/regions.ts`. */
+    upland?: boolean;
     /** Lägsta reservatsnivå där arten kan finnas (fas 2.3). */
     minLevel?: 0 | 1 | 2 | 3;
   };
@@ -55,7 +60,7 @@ export const RARITY_POINTS: Record<Rarity, number> = { common: 50, uncommon: 100
 export const RARITY_WEIGHT: Record<Rarity, number> = { common: 1, uncommon: 0.3, rare: 0.04, very_rare: 0 };
 
 /** Vattenzonen (spec: Vatten): på land minst 12 m och högst 100 m från större vatten. */
-export const WATER_ZONE = { minM: 12, maxM: 100, defaultAreaM2: 5000 } as const;
+export const WATER_ZONE = { minM: WATER_CLEARANCE_M, maxM: 100, defaultAreaM2: 5000 } as const;
 
 const L = { common: 1500, uncommon: 2400, rare: 3600, very_rare: 3600 };
 
@@ -104,7 +109,8 @@ export const SPECIES: Record<SpeciesId, Species> = {
     id: "beaver", rarity: "uncommon", points: 100, escape: "dive",
     habitat: { forest: 1, wetland: 1, edge: 1, grass: 0.8, park: 0.5, field: 0.5, open: 0.8, urban: 0.1 },
     active: { dusk: 1, night: 0.7, dawn: 0.6, day: 0.1 },
-    needs: { waterZone: true },
+    // Vid åar, bäckar och sjöar.
+    needs: { waterZone: true, streams: true },
     detectionM: 40, photoM: 25, skittish: 0.6, walkMps: 0.5, fleeMps: 2.5, heightM: 0.4, lifetimeS: L.uncommon,
   },
   wild_boar: {
@@ -131,7 +137,7 @@ export const SPECIES: Record<SpeciesId, Species> = {
     id: "otter", rarity: "rare", points: 250, escape: "dive",
     habitat: { forest: 1, wetland: 1, edge: 1, grass: 0.7, park: 0.3, field: 0.5, open: 0.7, urban: 0.05 },
     active: { dusk: 1, night: 0.6, dawn: 0.7, day: 0.2 },
-    needs: { waterZone: true },
+    needs: { waterZone: true, streams: true },
     detectionM: 40, photoM: 25, skittish: 0.7, walkMps: 0.8, fleeMps: 4, heightM: 0.3, lifetimeS: L.rare,
   },
   lynx: {
@@ -158,9 +164,18 @@ export const SPECIES: Record<SpeciesId, Species> = {
     id: "white_tailed_eagle", rarity: "very_rare", points: 1000, escape: "fly",
     habitat: { forest: 1, wetland: 1, edge: 1, grass: 1, field: 1, open: 1, park: 0.3, urban: 0 },
     active: { day: 1, dawn: 0.3, dusk: 0.3 },
-    // Sitter högt nära stora vatten (≥ 10 ha); kräver nivå 3 eller dyker upp som observation (fas 2.3).
-    needs: { waterZone: true, waterAreaM2: 100_000, minLevel: 3 },
+    // Sitter högt vid kusten eller stora sjöar (≥ 50 ha); kräver nivå 3 eller dyker upp som observation (fas 2.3).
+    needs: { waterZone: true, waterAreaM2: 500_000, minLevel: 3 },
     detectionM: 80, photoM: 50, skittish: 0.6, walkMps: 0, fleeMps: 0, heightM: 0.9, lifetimeS: L.very_rare,
+  },
+  // Tillägg utöver specens 15 arter (Pers önskemål 2026-11-21): bara i höglänt terräng, till exempel Sälen, Idre, Branäs och fjällen.
+  reindeer: {
+    id: "reindeer", rarity: "uncommon", points: 100, escape: "run",
+    habitat: { open: 1, grass: 1, wetland: 0.8, forest: 0.6, edge: 0.8, field: 0.3, park: 0.05, urban: 0 },
+    active: { dawn: 1, day: 0.8, dusk: 1, night: 0.3 },
+    needs: { upland: true },
+    detectionM: 50, photoM: 30, skittish: 0.35, walkMps: 0.7, fleeMps: 6, heightM: 1.1, lifetimeS: L.uncommon,
+    variants: [{ id: "white", chance: 0.03 }],
   },
 };
 
@@ -168,8 +183,8 @@ export const ALL_SPECIES = Object.keys(SPECIES) as SpeciesId[];
 
 /** Var platsen ligger i förhållande till vatten, för vattenarterna. */
 export interface WaterContext {
-  /** Avstånd (m) till närmaste vatten av minst den storlek arten kräver, eller Infinity. */
-  distToWater(minAreaM2: number): number;
+  /** Avstånd (m) till närmaste vatten av minst den storlek arten kräver (med `streams` även åar och bäckar), eller Infinity. */
+  distToWater(minAreaM2: number, streams?: boolean): number;
 }
 
 export interface WeightContext {
@@ -179,18 +194,21 @@ export interface WeightContext {
   phase: DayPhase;
   /** Reservatsnivå på platsen (0 utanför reservat). */
   level: 0 | 1 | 2 | 3;
+  /** Platsen ligger i höglänt terräng (`geo/regions.ts`). */
+  upland?: boolean;
   /** Klassvikter för nivån (fas 2.3); standard RARITY_WEIGHT. */
   rarityWeight?: Record<Rarity, number>;
 }
 
 export function inWaterZone(s: Species, w: WaterContext): boolean {
-  const d = w.distToWater(s.needs?.waterAreaM2 ?? WATER_ZONE.defaultAreaM2);
+  const d = w.distToWater(s.needs?.waterAreaM2 ?? WATER_ZONE.defaultAreaM2, s.needs?.streams);
   return d >= WATER_ZONE.minM && d <= WATER_ZONE.maxM;
 }
 
 /** Artens vikt på en plats: habitat (+ skogsbryn) × klassvikt × aktivitet, med specens krav (vattenzon, nivå). */
 export function speciesWeight(s: Species, c: WeightContext): number {
   if ((s.needs?.minLevel ?? 0) > c.level) return 0;
+  if (s.needs?.upland && !c.upland) return 0;
   if (s.needs?.waterZone && !inWaterZone(s, c.water)) return 0;
   const base = s.habitat[c.habitat] ?? 0;
   const edge = c.forestNear && c.habitat !== "forest" ? s.habitat.edge ?? 0 : 0;
