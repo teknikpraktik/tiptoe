@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ALL_SPECIES, SPECIES, type SpeciesId } from "@/engine/species";
 import { listPhotos, photoId, savePhoto } from "@/storage/photos";
 import { CameraView, prepareCameraView, type CameraMetrics, type Pose, type ShotResult } from "../../_client/CameraView";
 import { animalManifest, type AnimalManifest } from "../../_client/animalImages";
@@ -23,6 +24,7 @@ export function CameraTest() {
   const [orientation, setOrientation] = useState<OrientationStatus>("unsupported");
   const [dist, setDist] = useState(20);
   const [pose, setPose] = useState<Pose>("calm");
+  const [species, setSpecies] = useState<SpeciesId>("roe_deer");
   const [animalHeading, setAnimalHeading] = useState(90);
   const [bearing, setBearing] = useState(0);
   const [shot, setShot] = useState<{ url: string; blob: Blob; r: ShotResult } | null>(null);
@@ -76,10 +78,16 @@ export function CameraTest() {
         <p>{t("spike.intro")}</p>
         <label className="field">{t("spike.distance", { m: dist })}<input type="range" min={5} max={60} value={dist} onChange={(e) => setDist(Number(e.target.value))} /></label>
         <label className="field">{t("spike.view", { deg: animalHeading })}<input type="range" min={0} max={359} step={15} value={animalHeading} onChange={(e) => setAnimalHeading(Number(e.target.value))} /></label>
+        <label className="field">{t("spike.species")}
+          <select value={species} onChange={(e) => setSpecies(e.target.value as SpeciesId)} data-testid="species">
+            {ALL_SPECIES.map((id) => <option key={id} value={id}>{t(`species.${id}`)}{manifest?.species[id]?.placeholder === false ? "" : " *"}</option>)}
+          </select>
+        </label>
         <div className="seg">
           <span>{t("spike.pose")}</span>
           <button className={`btn small ${pose === "calm" ? "on" : ""}`} onClick={() => setPose("calm")}>{t("spike.poseCalm")}</button>
           <button className={`btn small ${pose === "alert" ? "on" : ""}`} onClick={() => setPose("alert")}>{t("spike.poseAlert")}</button>
+          <button className={`btn small ${pose === "rest" ? "on" : ""}`} onClick={() => setPose("rest")}>{t("spike.poseRest")}</button>
         </div>
         <button className="btn primary wide" onClick={openCamera} data-testid="open-camera">{t("camera.open")}</button>
         <p className="muted">{t("spike.photos", { n: count })}</p>
@@ -103,7 +111,7 @@ export function CameraTest() {
       </div>
       {open && manifest && (
         <CameraView
-          target={{ bearingDeg: bearing, distM: dist, headingDeg: (bearing + animalHeading) % 360, heightM: 0.8, photoDistM: 30, pose, images: manifest.species.roe_deer.views }}
+          target={{ bearingDeg: bearing, distM: dist, headingDeg: (bearing + animalHeading) % 360, heightM: SPECIES[species].heightM, photoDistM: SPECIES[species].photoM, pose, images: manifest.species[species].views }}
           canShoot
           orientation={orientation}
           onClose={() => setOpen(false)}

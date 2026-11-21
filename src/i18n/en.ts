@@ -285,6 +285,9 @@ export const en: Record<MessageKey, string> = {
   "backup.reminder": "You haven't exported your finds for a while. Make a backup in the settings.",
   "backup.reminderAction": "Export",
 
+  "spike.species": "Species (* = placeholder)",
+  "spike.poseRest": "Resting",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 };

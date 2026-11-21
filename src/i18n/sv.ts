@@ -286,6 +286,9 @@ export const sv = {
   "backup.reminder": "Du har inte exporterat dina fynd på ett tag. Gör en säkerhetskopia i inställningarna.",
   "backup.reminderAction": "Exportera",
 
+  "spike.species": "Art (* = platshållare)",
+  "spike.poseRest": "Vilar",
+
   "lang.sv": "Svenska",
   "lang.en": "English",
 } as const;

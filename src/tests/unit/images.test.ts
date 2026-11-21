@@ -12,12 +12,24 @@ describe("djurbilder (manifestet)", () => {
       const s = manifest.species[id];
       expect(s, id).toBeDefined();
       expect(s.license, id).toBeTruthy();
-      for (const v of ["side", "front", "back"]) for (const pose of ["calm", "alert"]) {
+      const views = ["side", "front", "back", ...(s.views.quarter ? ["quarter"] : [])];
+      for (const v of views) for (const pose of ["calm", "alert", ...(s.views[v].rest ? ["rest"] : [])]) {
         const im = s.views[v][pose];
         expect(existsSync(path.join(root, im.src)), `${id} ${v} ${pose}`).toBe(true);
         expect(im.aspect).toBeGreaterThan(0.2);
         expect(im.aspect).toBeLessThan(8);
       }
+    }
+  });
+});
+
+describe("riktiga bilder", () => {
+  it("vildsvin, igelkott, hare, ekorre, grävling och räv har riktiga bilder med trekvart och liggande pose; resten är platshållare", () => {
+    const real = ALL_SPECIES.filter((id) => manifest.species[id].placeholder === false);
+    expect(real.sort()).toEqual(["badger", "hare", "hedgehog", "red_fox", "squirrel", "wild_boar"]);
+    for (const id of real) {
+      expect(manifest.species[id].views.quarter.calm.src).toMatch(/\.webp$/);
+      expect(manifest.species[id].views.side.rest.src).toMatch(/side-lie\.webp$/);
     }
   });
 });
