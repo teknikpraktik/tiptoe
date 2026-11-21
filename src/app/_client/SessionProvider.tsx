@@ -26,7 +26,7 @@ export const debugEnabled = () => { try { return localStorage.getItem(DEBUG_KEY)
 /** En promenadsession för hela appen, så att GPS och promenad överlever sidbyten. */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [ctx, setCtx] = useState<Ctx | null>(null);
-  const { lang } = useLang();
+  const { lang, setLang } = useLang();
   useEffect(() => {
     let cancelled = false;
     let session: WalkSession | null = null;
@@ -50,6 +50,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       await session.init(lang);
       if (cancelled) return;
       session.subscribe(() => walkStatus.set(session!.getView().stage === "walking"));
+      // Språket följer profilen (spec: manuellt val per profil).
+      const pl = session.getView().profile?.lang;
+      if (pl) setLang(pl);
       // Felsökningshak för fälttest och e2e: localStorage "tiptoe.debug" = "on" ger window.__tiptoe.
       if (debugEnabled()) (window as unknown as { __tiptoe?: WalkSession }).__tiptoe = session;
       setCtx({ session, db });

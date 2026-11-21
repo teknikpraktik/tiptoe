@@ -58,6 +58,7 @@ export interface ClosureView { id: number; ha: number; kind: "new" | "grew"; pie
 export interface WalkView {
   stage: "loading" | "idle" | "paused" | "walking";
   profile: Profile | null;
+  profiles: Profile[];
   walk: WalkMeta | null;
   pos: LatLon | null;
   accuracyM: number | null;
@@ -146,7 +147,7 @@ export class WalkSession {
     this.nowFn = d.now ?? Date.now;
     this.provider = new GpsProvider(d.geo, () => this.now());
     this.view = {
-      stage: "loading", profile: null, walk: null, pos: null, accuracyM: null, quality: "unavailable", headingDeg: null, tempo: "still", tempoSource: "gps", gpsError: null,
+      stage: "loading", profile: null, profiles: [], walk: null, pos: null, accuracyM: null, quality: "unavailable", headingDeg: null, tempo: "still", tempoSource: "gps", gpsError: null,
       track: [], reserves: [], totalAreaM2: 0, lastClosure: null, notice: null, levelInfo: null, sightings: [], trails: [], freeze: null, animals: [], photoTarget: null, score: scoreFrom([]), env: "none", storage: d.repo ? "ok" : "none",
     };
   }
@@ -170,10 +171,18 @@ export class WalkSession {
     const repo = this.d.repo;
     if (!repo) { this.set({ stage: "idle" }); return; }
     const profile = await repo.ensureProfile(lang, this.now());
+    await this.loadProfile(profile);
+  }
+
+  /** Läser in en profils data (reservat, observationer, inflyttade, en pausad promenad). */
+  private async loadProfile(profile: Profile): Promise<void> {
+    const repo = this.d.repo!;
+    this.engine = null; this.track = []; this.fieldLog = null; this.addedThisWalkM2 = 0;
+    const profiles = (await repo.profiles()).sort((a, b) => a.createdAt - b.createdAt);
     const [reserves, observations, active, residents] = await Promise.all([repo.reserves(profile.id), repo.observations(profile.id), repo.activeWalk(profile.id), repo.residents(profile.id)]);
     this.observations = observations;
     this.residents = residents;
-    const patch: Partial<WalkView> = { profile, reserves, totalAreaM2: totalAreaM2(reserves), score: scoreFrom(observations) };
+    const patch: Partial<WalkView> = { profile, profiles, reserves, totalAreaM2: totalAreaM2(reserves), score: scoreFrom(observations), sightings: [], trails: [], animals: [], lastClosure: null, levelInfo: null };
     if (active) {
       this.track = await repo.track(profile.id, active.id);
       this.savedChunks = Math.ceil(this.track.length / CHUNK_POINTS);
@@ -185,8 +194,50 @@ export class WalkSession {
       this.log("restore", { walk: active.id, points: this.track.length, snapshot: !!snap });
       return;
     }
-    this.set({ ...patch, stage: "idle" });
+    this.set({ ...patch, stage: "idle", walk: null, track: [] });
   }
+
+  // ---------- profiler (spec: flera lokala profiler per telefon) ----------
+  private canChangeProfile() { return this.d.repo && this.view.stage !== "walking"; }
+  async switchProfile(id: string): Promise<boolean> {
+    const repo = this.d.repo;
+    if (!repo || !this.canChangeProfile()) return false;
+    const p = (await repo.profiles()).find((x) => x.id === id);
+    if (!p) return false;
+    await repo.setActiveProfile(id);
+    await this.loadProfile(p);
+    this.log("profile_switch", { id });
+    return true;
+  }
+  async createProfile(name: string, kind: Profile["kind"], lang: Profile["lang"]): Promise<Profile | null> {
+    const repo = this.d.repo;
+    if (!repo || !this.canChangeProfile()) return null;
+    const p = await repo.createProfile(name, kind, lang, this.now());
+    await this.switchProfile(p.id);
+    return p;
+  }
+  async updateProfile(patch: Partial<Pick<Profile, "name" | "kind" | "lang" | "homeRadiusM" | "home">>): Promise<void> {
+    const repo = this.d.repo, p = this.view.profile;
+    if (!repo || !p) return;
+    const np = { ...p, ...patch };
+    await repo.saveProfile(np);
+    this.set({ profile: np, profiles: this.view.profiles.map((x) => (x.id === np.id ? np : x)) });
+  }
+  async deleteProfile(id: string): Promise<boolean> {
+    const repo = this.d.repo;
+    if (!repo || !this.canChangeProfile() || this.view.profiles.length <= 1) return false;
+    await repo.deleteProfile(id);
+    const next = await repo.ensureProfile(this.view.profile?.lang ?? "sv", this.now());
+    await repo.setActiveProfile(next.id);
+    await this.loadProfile(next);
+    return true;
+  }
+  /** Inom profilens hemområde (eller inget hemområde). Tips och observationer pekar bara hit (spec: Hemområde). */
+  inHomeArea = (p: LatLon): boolean => {
+    const pr = this.view.profile;
+    if (!pr?.homeRadiusM || !pr.home) return true;
+    return haversineM(pr.home, p) <= pr.homeRadiusM;
+  };
 
   /** Starta en ny promenad (eller fortsätt en pausad). Anropas från ett klick (iOS: rörelsesensorn kräver en gest). */
   async start(): Promise<void> {
@@ -292,6 +343,11 @@ export class WalkSession {
       if (canTrack(out.quality)) this.appendTrack({ lat: pos.lat, lon: pos.lon, tMs: e.fix.timestampMs, accuracyM: e.fix.accuracyM });
     }
     this.set({ pos, accuracyM: e.fix.accuracyM, quality: out.quality, headingDeg: this.heading.heading, gpsError: null });
+    const pr = this.view.profile;
+    if (pos && pr?.homeRadiusM && !pr.home && out.quality !== "poor" && out.quality !== "unavailable" && this.view.stage === "walking") {
+      void this.updateProfile({ home: { lat: pos.lat, lon: pos.lon } });
+      this.log("home_set", { radiusM: pr.homeRadiusM });
+    }
     this.tick(e.receivedAtMs);
   }
 
@@ -381,7 +437,7 @@ export class WalkSession {
     const km = Math.floor((this.engine?.s.metersWalked ?? 0) / OBSERVATION.everyM);
     if (km <= this.obsKm || !this.engine || !this.env) return;
     this.obsKm = km;
-    const c = planObservation(this.env, pos, this.view.profile?.id ?? "p1", tMs, km);
+    const c = planObservation(this.env, pos, this.view.profile?.id ?? "p1", tMs, km, this.inHomeArea);
     if (!c) return;
     this.engine.addObservation(c, tMs + OBSERVATION.durationMs);
     const dist = haversineM(pos, c.home);
@@ -498,7 +554,7 @@ export class WalkSession {
     const distM = haversineM(pos, a.pos);
     const rating = ratePhoto({ distM, photoM: sp.photoM, placement: shot.placement, state: a.state === "alert" ? "alert" : a.state === "flee" ? "flee" : "calm" });
     const photoId = `ph${this.id()}`;
-    await this.d.repo?.savePhoto({ id: photoId, createdAt: this.now(), blob: shot.blob, width: shot.width, height: shot.height, meta: { animalId, species: a.species, stars: rating.stars } });
+    await this.d.repo?.savePhoto({ id: photoId, profileId: p.id, createdAt: this.now(), blob: shot.blob, width: shot.width, height: shot.height, meta: { animalId, species: a.species, stars: rating.stars } });
     w.photos++;
     let observation: Observation | null = null, points = 0;
     const before = scoreFrom(this.observations);
