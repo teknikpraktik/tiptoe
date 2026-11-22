@@ -51,7 +51,6 @@ export const PALETTE = {
   major: "#f4cf86",
   majorCase: "#a8783c",
   motorway: "#ef9f62",
-  rail: "#7d7368",
   label: "#3b3226",
   halo: "#f7f1e3",
   waterLabel: "#2a6690",
@@ -118,7 +117,9 @@ export const MAP_STYLE: StyleSpecification = {
     // Alla stigar, gång- och cykelbanor och traktorvägar ser likadana ut: mörkgrå, streckade, tydliga både i skog och i tätort.
     { id: "path", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["any", ["==", "class", "track"], ["all", ["==", "class", "path"], ["in", "subclass", ...TRAILS, ...WALKWAYS]]], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round" }, paint: { "line-color": PALETTE.path, "line-width": w(12, 0.9, 15, 1.7, 18, 2.8), "line-dasharray": [2.2, 1.5], "line-opacity": 0.9 } },
     { id: "minor", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["in", "class", "minor", "service"], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.minor, "line-width": w(12, 0.6, 18, 8) } },
-    { id: "railway", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["==", "class", "rail"], ["!=", "brunnel", "tunnel"]], paint: { "line-color": PALETTE.rail, "line-width": w(10, 1, 18, 3.5), "line-dasharray": [3, 2] } },
+    // Järnväg: kraftig mörk linje med vita streck (klassisk järnvägssignatur), så att den aldrig förväxlas med en stig.
+    { id: "railway", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["==", "class", "rail"], ["!=", "brunnel", "tunnel"]], layout: { "line-join": "round" }, paint: { "line-color": "#2f2c28", "line-width": w(10, 1.6, 14, 3.5, 18, 7) } },
+    { id: "railway-dash", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["==", "class", "rail"], ["!=", "brunnel", "tunnel"]], paint: { "line-color": "#f7f1e3", "line-width": w(12, 1, 14, 1.8, 18, 4), "line-dasharray": [3, 3] } },
     { id: "major", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["in", "class", ...MAJOR], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.major, "line-width": w(8, 0.8, 12, 2.4, 18, 14) } },
     { id: "motorway", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["in", "class", "motorway", "trunk"], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.motorway, "line-width": w(8, 0.8, 12, 2.4, 18, 14) } },
     // --- Etiketter ---
