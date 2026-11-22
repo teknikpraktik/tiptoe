@@ -120,6 +120,20 @@ export const MAP_STYLE: StyleSpecification = {
   ],
 };
 
+/** Spårens tassavtryck (32 × 32 px, pixelRatio 2): trampdyna och fyra tår i mörkbrunt med ljus kant, pekar uppåt (framåt). */
+export const PAW_IMAGE = "paw";
+export function pawImage(): { width: number; height: number; data: Uint8Array } {
+  const n = 32, data = new Uint8Array(n * n * 4);
+  const blobs: [number, number, number, number][] = [[16, 21, 7, 6], [8.5, 11.5, 2.8, 3.6], [13.5, 7.5, 2.8, 3.8], [18.5, 7.5, 2.8, 3.8], [23.5, 11.5, 2.8, 3.6]];
+  const inside = (x: number, y: number, grow: number) => blobs.some(([cx, cy, rx, ry]) => ((x - cx) / (rx + grow)) ** 2 + ((y - cy) / (ry + grow)) ** 2 <= 1);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const i = (y * n + x) * 4, px = x + 0.5, py = y + 0.5;
+    if (inside(px, py, 0)) { data[i] = 0x5a; data[i + 1] = 0x34; data[i + 2] = 0x18; data[i + 3] = 255; }
+    else if (inside(px, py, 1.6)) { data[i] = 0xfb; data[i + 1] = 0xf9; data[i + 2] = 0xf3; data[i + 3] = 210; }
+  }
+  return { width: n, height: n, data };
+}
+
 /** Myrens mönster: korta blå streck på genomskinlig botten (16 × 16 px), som på friluftskartor. */
 export function marshPattern(): { width: number; height: number; data: Uint8Array } {
   const n = 16, data = new Uint8Array(n * n * 4);
