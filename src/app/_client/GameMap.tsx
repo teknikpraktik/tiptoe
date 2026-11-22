@@ -9,7 +9,7 @@ import { Map as MapLibreMap, Marker, ScaleControl, setWorkerUrl, type GeoJSONSou
 import { useEffect, useRef, useState } from "react";
 import { haversineM, type LatLon } from "@/geo/geometry";
 import { wrap180 } from "@/sensors/heading";
-import { MAP_ATTRIBUTION, MAP_STYLE } from "./mapStyle";
+import { MAP_ATTRIBUTION, MAP_STYLE, MARSH_PATTERN, marshPattern } from "./mapStyle";
 
 const fc = (features: GeoJSON.Feature[] = []): GeoJSON.FeatureCollection => ({ type: "FeatureCollection", features });
 const line = (pts: LatLon[], props: Record<string, unknown> = {}): GeoJSON.Feature => ({ type: "Feature", properties: props, geometry: { type: "LineString", coordinates: pts.map((p) => [p.lon, p.lat]) } });
@@ -100,20 +100,22 @@ export default function GameMap(props: GameMapProps) {
       // Kartbilden är en bonus: tappas tiles fortsätter spelet. Logga bara de första felen.
       if (tileErrors++ < 3) propsRef.current.onError?.(String((e as unknown as { error?: { message?: string } }).error?.message ?? "map error"));
     });
+    // Myrens mönster ritas i koden (inga sprites).
+    map.on("styleimagemissing", (e) => { if (e.id === MARSH_PATTERN && !map.hasImage(MARSH_PATTERN)) map.addImage(MARSH_PATTERN, marshPattern()); });
     map.on("load", () => {
       map.addSource("acc", { type: "geojson", data: fc() });
-      map.addLayer({ id: "acc", type: "fill", source: "acc", paint: { "fill-color": "#f4e9cf", "fill-opacity": 0.12 } });
+      map.addLayer({ id: "acc", type: "fill", source: "acc", paint: { "fill-color": "#2f7fd8", "fill-opacity": 0.1 } });
       map.addSource("reserves", { type: "geojson", data: fc() });
-      map.addLayer({ id: "reserves", type: "fill", source: "reserves", paint: { "fill-color": ["match", ["get", "level"], 3, "#f2d36b", 2, "#c9e07a", 1, "#a8d070", "#9cc56b"], "fill-opacity": ["match", ["get", "level"], 3, 0.3, 2, 0.27, 1, 0.24, 0.2] } });
-      map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#f6e39c", "#c8e39b"], "line-width": ["match", ["get", "level"], 3, 3, 2, 2.5, 2], "line-opacity": 0.85 } });
+      map.addLayer({ id: "reserves", type: "fill", source: "reserves", paint: { "fill-color": ["match", ["get", "level"], 3, "#e0a91b", 2, "#4f9a2e", 1, "#5fae3a", "#6dbb46"], "fill-opacity": ["match", ["get", "level"], 3, 0.28, 2, 0.26, 1, 0.22, 0.18] } });
+      map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#b8860b", "#2f7a22"], "line-width": ["match", ["get", "level"], 3, 3, 2, 2.5, 2], "line-opacity": 0.85 } });
       map.addSource("closure", { type: "geojson", data: fc() });
-      map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#f2d36b", "fill-opacity": 0 } });
+      map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#e0a91b", "fill-opacity": 0 } });
       map.addSource("home", { type: "geojson", data: fc() });
-      map.addLayer({ id: "home", type: "line", source: "home", paint: { "line-color": "#f4e9cf", "line-width": 1.5, "line-opacity": 0.5, "line-dasharray": [4, 3] } });
+      map.addLayer({ id: "home", type: "line", source: "home", paint: { "line-color": "#4a5a3f", "line-width": 1.5, "line-opacity": 0.6, "line-dasharray": [4, 3] } });
       map.addSource("trails", { type: "geojson", data: fc() });
-      map.addLayer({ id: "trails", type: "circle", source: "trails", paint: { "circle-radius": 2.6, "circle-color": "#e9d3a6", "circle-opacity": ["get", "o"], "circle-stroke-color": "#2b2f27", "circle-stroke-width": 0.8 } });
+      map.addLayer({ id: "trails", type: "circle", source: "trails", paint: { "circle-radius": 2.6, "circle-color": "#7a4a1e", "circle-opacity": ["get", "o"], "circle-stroke-color": "#fbf9f3", "circle-stroke-width": 0.8 } });
       map.addSource("track", { type: "geojson", data: fc() });
-      map.addLayer({ id: "track", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#f2b35b", "line-width": 3, "line-opacity": 0.85 } });
+      map.addLayer({ id: "track", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#e8701a", "line-width": 3.5, "line-opacity": 0.9 } });
       setLoaded(true);
     });
     // Svart karta: iOS kan tappa ritytan efter bakgrund. Rita om vid återkomst och vid storleksändring, och läs in stilen igen om den inte

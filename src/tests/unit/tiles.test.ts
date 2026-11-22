@@ -1,19 +1,21 @@
 // Origin: teknikpraktik/solosurvival@033a121 src/tests/unit/tiles.test.ts
 // Tiptoe har inga egna stigtiles (Outbreaks Värmlandsdata kopieras inte). Kvar är testet av bakgrundskartans stil och tile-täckningen.
 import { describe, expect, it } from "vitest";
-import { MAP_STYLE } from "@/app/_client/mapStyle";
+import { MAP_STYLE, marshPattern } from "@/app/_client/mapStyle";
 import { tileRange } from "@/geo/blockers";
 
 describe("bakgrundskarta", () => {
-  it("stilen är lätt: bara fyllnads-/linjelager mot en källa, inga etiketter eller sprites", () => {
-    const srcs = Object.keys(MAP_STYLE.sources);
-    expect(srcs).toEqual(["omt"]);
-    for (const l of MAP_STYLE.layers) {
-      expect(["background", "fill", "line"]).toContain(l.type);
-      if ("source" in l) expect(srcs).toContain(l.source);
-    }
+  it("stilen hämtar bara från nyckelfria källor: OpenFreeMap (tiles och typsnitt) och Terrain Tiles på AWS; inga sprites", () => {
+    expect(Object.keys(MAP_STYLE.sources).sort()).toEqual(["dem", "omt"]);
+    const urls = [JSON.stringify(MAP_STYLE.sources), MAP_STYLE.glyphs ?? ""].join(" ").match(/https:\/\/[^/"]+/g) ?? [];
+    expect(new Set(urls)).toEqual(new Set(["https://tiles.openfreemap.org", "https://s3.amazonaws.com"]));
     expect(MAP_STYLE.sprite).toBeUndefined();
-    expect(MAP_STYLE.glyphs).toBeUndefined();
+    for (const l of MAP_STYLE.layers) {
+      expect(["background", "fill", "line", "hillshade", "symbol"]).toContain(l.type);
+      if (l.type === "symbol") for (const f of JSON.stringify(l.layout?.["text-font"]).match(/Noto Sans \w+/g) ?? []) expect(["Noto Sans Regular", "Noto Sans Italic", "Noto Sans Bold"]).toContain(f);
+    }
+    // Myrens mönster ritas i koden: 16 × 16 RGBA.
+    expect(marshPattern().data.length).toBe(16 * 16 * 4);
   });
 });
 
