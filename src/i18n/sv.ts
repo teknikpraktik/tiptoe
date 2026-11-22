@@ -71,7 +71,6 @@ export const sv = {
   "spike.metrics": "Mätvärden",
   "spike.copyReport": "Kopiera mätvärden",
   "spike.copied": "Kopierat",
-  "home.tests": "Test (fas 1)",
 
 
 
@@ -96,6 +95,21 @@ export const sv = {
   "menu.settingsHint": "Profil, språk och säkerhetskopia",
   "menu.home": "Startsidan",
   "menu.homeHint": "Promenaden fortsätter i bakgrunden",
+  "howto.link": "Hur funkar det?",
+  "howto.title": "Så spelar du",
+  "howto.ok": "Nu kör vi",
+  "howto.walk.title": "Gå ut",
+  "howto.walk.body": "Starta en promenad. Kartan visar var du är, och djuren finns runt omkring dig i verkligheten.",
+  "howto.tracks.title": "Följ spåren",
+  "howto.tracks.body": "Tassavtryck på kartan leder till ett djur. En ring är ett djur nära dig. Tryck på ringen för att se mer.",
+  "howto.sneak.title": "Smyg och frys",
+  "howto.sneak.body": "Gå långsamt närmare. Tittar djuret mot dig ska du stå helt still, annars flyr det.",
+  "howto.photo.title": "Fotografera",
+  "howto.photo.body": "När kameraknappen lyser: håll upp telefonen mot djuret och ta bilden. Närmare och skarpare ger fler stjärnor, och nya arter hamnar i fältdagboken.",
+  "howto.reserve.title": "Skapa reservat",
+  "howto.reserve.body": "Gå en sluten slinga, till exempel runt ett kvarter. Området blir ditt reservat, och större reservat lockar ovanligare djur.",
+  "howto.safety.title": "Säkerhet",
+  "howto.safety.body": "Titta upp när du går. Djuren finns aldrig på vägar eller i vatten, så följ aldrig ett djur dit.",
   "walk.menu": "Meny",
   "walk.points": "{n} p",
   "walk.area": "{ha} ha",
@@ -180,7 +194,6 @@ export const sv = {
   "field.debugOff": "Av (laddar om)",
   "field.battery": "Batteri mäts för hand: notera procent och ljusstyrka före och efter promenaden.",
   "field.current": "Pågående promenad",
-  "home.field": "Fälttest",
 
   "field.compassLine": "kompass {c} · gyro {g} · lutning {p}",
   "field.logTitle": `Fältlogg från ${BRAND.prose.sv}`,

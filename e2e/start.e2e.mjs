@@ -20,6 +20,12 @@ try {
   check("logotypen klipps inte (Å får plats)", clip.textTop >= clip.boxTop - 0.5 && clip.overflow <= 1, JSON.stringify(clip));
   check("svensk slogan", (await page.locator(".homehead .sub").innerText()).includes("Upptäck djuren"));
   await page.screenshot({ path: `${OUT}/01-start.png` });
+  // "Hur funkar det?": en länk, inte en knapp till bland de stora; sex steg i ett ark.
+  await page.getByTestId("howto").click();
+  check("Hur funkar det? visar stegen", (await page.locator('[data-testid="howto-steps"] li').count()) === 6);
+  await page.screenshot({ path: `${OUT}/01-howto.png` });
+  await page.getByText("Nu kör vi", { exact: true }).click();
+  check("startsidan har tre stora knappar (ingen fälttestknapp)", (await page.locator(".homenav > .btn").count()) === 3 && (await page.getByText("Fälttest").count()) === 0);
   await page.waitForFunction(() => !document.querySelector('[data-testid="home-start"]')?.hasAttribute("disabled"), null, { timeout: 10000 });
   await page.getByTestId("home-start").click();
   // Webbläsarläge (inte installerad): varningen visas, spela ändå.
