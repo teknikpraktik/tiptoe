@@ -263,7 +263,6 @@ export const sv = {
   "settings.kind.adult": "Vuxen",
   "settings.language": "Språk",
   "settings.sound": "Ljud",
-  "settings.active": "Aktiv",
   "settings.deleteConfirm": "Radera profilen {name} med alla promenader, reservat och foton? Det går inte att ångra.",
   "settings.newProfile": "Ny profil",
   "settings.create": "Skapa",

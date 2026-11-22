@@ -42,7 +42,7 @@ export function Settings() {
           <div className="profilepick" role="radiogroup" aria-label={t("settings.profile")}>
             {v.profiles.map((x) => (
               <button key={x.id} role="radio" aria-checked={x.id === p.id} className={`btn small ${x.id === p.id ? "on" : ""}`} onClick={() => x.id !== p.id && void use(x.id, x.lang)} data-testid={`profile-${x.name}`}>
-                {x.name}{x.id === p.id ? ` · ${t("settings.active")}` : ""}
+                {x.id === p.id ? `✓ ${x.name}` : x.name}
               </button>
             ))}
             {!adding && <button className="btn small ghost" onClick={() => setAdding(true)} data-testid="add-profile">{t("settings.newProfile")}</button>}

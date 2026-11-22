@@ -45,9 +45,7 @@ export const PALETTE = {
   water: "#8fc1df",
   waterEdge: "#4e8fbf",
   waterway: "#5c9fd0",
-  path: "#7a573c",
-  walkway: "#c9b49a",
-  track: "#9b8261",
+  path: "#4b4a45",
   minor: "#fffaf0",
   minorCase: "#a8957a",
   major: "#f4cf86",
@@ -117,9 +115,8 @@ export const MAP_STYLE: StyleSpecification = {
     // --- Vägar och stigar: tusch och blyerts (kant under, fyllnad över) ---
     { id: "minor-case", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["in", "class", "minor", "service"], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.minorCase, "line-width": w(12, 1.2, 18, 10.5), "line-blur": 0.6 } },
     { id: "major-case", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["in", "class", "motorway", "trunk", ...MAJOR], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.majorCase, "line-width": w(8, 1.2, 12, 3.5, 18, 17), "line-blur": 0.6 } },
-    { id: "track", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["==", "class", "track"], layout: { "line-cap": "round" }, paint: { "line-color": PALETTE.track, "line-width": w(12, 0.8, 18, 2.6), "line-dasharray": [3, 2], "line-blur": 0.5, "line-opacity": 0.8 } },
-    { id: "walkway", type: "line", source: "omt", "source-layer": "transportation", minzoom: 15, filter: ["all", ["==", "class", "path"], ["in", "subclass", ...WALKWAYS], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.walkway, "line-width": w(15, 0.8, 18, 2.2), "line-opacity": 0.75, "line-blur": 0.5 } },
-    { id: "path", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["==", "class", "path"], ["in", "subclass", ...TRAILS], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round" }, paint: { "line-color": PALETTE.path, "line-width": w(12, 0.8, 15, 1.6, 18, 2.6), "line-dasharray": [2.2, 1.6], "line-blur": 0.4, "line-opacity": 0.85 } },
+    // Alla stigar, gång- och cykelbanor och traktorvägar ser likadana ut: mörkgrå, streckade, tydliga både i skog och i tätort.
+    { id: "path", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["any", ["==", "class", "track"], ["all", ["==", "class", "path"], ["in", "subclass", ...TRAILS, ...WALKWAYS]]], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round" }, paint: { "line-color": PALETTE.path, "line-width": w(12, 0.9, 15, 1.7, 18, 2.8), "line-dasharray": [2.2, 1.5], "line-opacity": 0.9 } },
     { id: "minor", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["in", "class", "minor", "service"], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.minor, "line-width": w(12, 0.6, 18, 8) } },
     { id: "railway", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["==", "class", "rail"], ["!=", "brunnel", "tunnel"]], paint: { "line-color": PALETTE.rail, "line-width": w(10, 1, 18, 3.5), "line-dasharray": [3, 2] } },
     { id: "major", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["in", "class", ...MAJOR], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.major, "line-width": w(8, 0.8, 12, 2.4, 18, 14) } },
