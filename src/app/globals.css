@@ -43,7 +43,7 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 /* Karta */
 .mapshell { position: fixed; inset: 0; overflow: hidden; }
 .mapshell .map-canvas { position: absolute; inset: 0; } /* specificitet över maplibregl-map (position: relative) */
-.attrib { position: absolute; right: 6px; bottom: calc(4px + var(--safe-bottom)); font-size: 10px; color: #f4e9cfaa; text-decoration: none; background: #1f231c99; padding: 1px 6px; border-radius: 6px; z-index: 3; }
+.attrib { position: absolute; right: 6px; bottom: calc(4px + var(--safe-bottom)); font-size: 10px; color: #3c3d35; text-decoration: none; background: #fbf9f3cc; padding: 1px 6px; border-radius: 6px; z-index: 3; }
 .statusbar { position: absolute; top: calc(10px + var(--safe-top)); left: 10px; right: 10px; display: flex; align-items: center; gap: 10px; z-index: 4; }
 .gps { padding: 6px 10px; border-radius: 999px; font-size: 13px; background: #1f231ccc; }
 .gps.q-ok { color: var(--good); } .gps.q-fair { color: var(--ink); } .gps.q-weak { color: var(--warn); } .gps.q-poor, .gps.q-unavailable { color: var(--bad); }
@@ -54,7 +54,7 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .pmark .arrow { display: none; }
 .pmark.has-heading .arrow { display: flex; }
 .pmark.has-heading .dot { display: none; }
-.maplibregl-ctrl-scale { background: #1f231c99 !important; color: var(--ink) !important; border-color: var(--ink) !important; }
+.maplibregl-ctrl-scale { background: #fbf9f3cc !important; color: #3c3d35 !important; border-color: #3c3d35 !important; }
 
 /* Dialog (Modal.tsx) */
 .modal-backdrop { position: fixed; inset: 0; background: #0009; display: flex; align-items: flex-end; justify-content: center; z-index: 50; padding: var(--safe-top) 0 0; }

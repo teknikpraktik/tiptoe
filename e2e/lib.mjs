@@ -21,6 +21,8 @@ export async function mockOpenFreeMap(ctx) {
     if (f && existsSync(f)) return route.fulfill({ contentType: "application/x-protobuf", body: readFileSync(f) });
     return route.fulfill({ status: 204, body: "" });
   });
+  // Terrängskuggningens höjddata: tom ruta (ingen skuggning i testerna, ingen trafik mot AWS).
+  await ctx.route("https://s3.amazonaws.com/elevation-tiles-prod/**", (route) => route.fulfill({ status: 204, body: "" }));
 }
 
 export async function setup({ out, geolocation = START, init } = {}) {
@@ -37,7 +39,7 @@ export async function setup({ out, geolocation = START, init } = {}) {
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  page.on("console", (m) => { if (m.type() === "error" && !/tiles\.openfreemap|204|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  page.on("console", (m) => { if (m.type() === "error" && !/tiles\.openfreemap|elevation-tiles|204|Failed to load resource/.test(m.text())) errors.push(m.text()); });
   const results = [];
   const check = (name, ok, info = "") => { results.push({ name, ok }); console.log(`${ok ? "PASS" : "FAIL"} ${name}${info ? " – " + info : ""}`); };
   const done = async () => {
