@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { haversineM } from "@/geo/geometry";
 import { planObservation } from "@/engine/world";
 import { openDb } from "@/storage/idb";
-import { CHILD_HOME_RADIUS_M, Repo } from "@/storage/repo";
+import { Repo } from "@/storage/repo";
 import { WalkSession } from "@/play/session";
 import { simEnvironment, simPoint } from "@/sim/env";
 
@@ -15,7 +15,7 @@ describe("profiler", () => {
     await s.init("sv");
     const first = s.getView().profile!;
     const kid = (await s.createProfile("Alva", "child", "sv"))!;
-    expect(kid.homeRadiusM).toBe(CHILD_HOME_RADIUS_M);
+    expect(kid.homeRadiusM).toBeNull(); // hemområdet är borttaget
     expect(s.getView().profile?.id).toBe(kid.id);
     expect(s.getView().profiles.map((p) => p.name)).toEqual(["Ranger", "Alva"]);
     // Data för båda profilerna.
@@ -42,8 +42,8 @@ describe("profiler", () => {
   });
 });
 
-describe("hemområde", () => {
-  it("observationer pekar bara inom hemområdet", () => {
+describe("observationer (motorn)", () => {
+  it("kan begränsas till ett område", () => {
     const env = simEnvironment();
     const home = simPoint(-500, -500), me = simPoint(-500, -500);
     const allowed = (p: { lat: number; lon: number }) => haversineM(home, p) <= 600;

@@ -49,8 +49,6 @@ export interface GameMapProps {
   /** Reservat som GeoJSON-ringar [lon, lat], med nivå (färgen blir varmare med nivån). */
   reserves?: [number, number][][][];
   reserveLevels?: number[];
-  /** Profilens hemområde (streckad cirkel). */
-  homeArea?: { center: LatLon; radiusM: number } | null;
   /** Spår mot djur som inte syns än (prickar). */
   trails?: { id: string; points: LatLon[] }[];
   /** Observationer: ungefärlig plats och etikett. */
@@ -124,8 +122,6 @@ export default function GameMap(props: GameMapProps) {
       map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#b8860b", "#2f7a22"], "line-width": ["match", ["get", "level"], 3, 3, 2, 2.5, 2], "line-opacity": 0.85 } });
       map.addSource("closure", { type: "geojson", data: fc() });
       map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#e0a91b", "fill-opacity": 0 } });
-      map.addSource("home", { type: "geojson", data: fc() });
-      map.addLayer({ id: "home", type: "line", source: "home", paint: { "line-color": "#4a5a3f", "line-width": 1.5, "line-opacity": 0.6, "line-dasharray": [4, 3] } });
       map.addSource("trails", { type: "geojson", data: fc() });
       // Djurspår: tassavtryck vridna längs spåret mot djuret, omväxlande vänster och höger fot.
       map.addLayer({ id: "trails", type: "symbol", source: "trails", layout: { "icon-image": PAW_IMAGE, "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.6, 18, 1.1], "icon-rotate": ["get", "r"], "icon-rotation-alignment": "map", "icon-offset": ["get", "off"], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": ["get", "o"] } });
@@ -163,8 +159,6 @@ export default function GameMap(props: GameMapProps) {
   }, [loaded, track, player]);
   const polys = (rs: [number, number][][][], levels?: number[]): GeoJSON.Feature[] => rs.map((rings, i) => ({ type: "Feature", properties: { level: levels?.[i] ?? 0 }, geometry: { type: "Polygon", coordinates: rings.map((r) => [...r, r[0]]) } }));
   useEffect(() => { if (loaded) src("reserves", fc(polys(reserves ?? [], props.reserveLevels))); }, [loaded, reserves, props.reserveLevels]);
-  const home = props.homeArea;
-  useEffect(() => { if (loaded) src("home", fc(home ? [circle(home.center, home.radiusM)] : [])); }, [loaded, home?.center.lat, home?.center.lon, home?.radiusM]);
   useEffect(() => {
     if (!loaded) return;
     // Tassarna tonar fram mot djuret (spåren blir färskare). Sista punkten ligger närmast djuret; riktningen är mot nästa punkt.

@@ -140,7 +140,7 @@ export function Walk() {
 
   return (
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} />
       <div className="statusbar" data-testid="status">
         {/* GPS-status visas bara när den är för dålig för att spela. */}
         {v.stage === "walking" && (v.quality === "poor" || v.quality === "unavailable") && <span className={`gps q-${v.quality}`} data-testid="gps-warn">{t(`gps.quality.${v.quality}`)}</span>}

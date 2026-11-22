@@ -236,7 +236,7 @@ export class WalkSession {
     await this.switchProfile(p.id);
     return p;
   }
-  async updateProfile(patch: Partial<Pick<Profile, "name" | "kind" | "lang" | "homeRadiusM" | "home">>): Promise<void> {
+  async updateProfile(patch: Partial<Pick<Profile, "name" | "kind" | "lang">>): Promise<void> {
     const repo = this.d.repo, p = this.view.profile;
     if (!repo || !p) return;
     const np = { ...p, ...patch };
@@ -256,12 +256,6 @@ export class WalkSession {
     await this.loadProfile(next);
     return true;
   }
-  /** Inom profilens hemområde (eller inget hemområde). Tips och observationer pekar bara hit (spec: Hemområde). */
-  inHomeArea = (p: LatLon): boolean => {
-    const pr = this.view.profile;
-    if (!pr?.homeRadiusM || !pr.home) return true;
-    return haversineM(pr.home, p) <= pr.homeRadiusM;
-  };
 
   /** Starta en ny promenad (eller fortsätt en pausad). Anropas från ett klick (iOS: rörelsesensorn kräver en gest). */
   async start(): Promise<void> {
@@ -367,11 +361,6 @@ export class WalkSession {
       if (canTrack(out.quality)) this.appendTrack({ lat: pos.lat, lon: pos.lon, tMs: e.fix.timestampMs, accuracyM: e.fix.accuracyM });
     }
     this.set({ pos, accuracyM: e.fix.accuracyM, quality: out.quality, headingDeg: this.heading.heading, gpsError: null });
-    const pr = this.view.profile;
-    if (pos && pr?.homeRadiusM && !pr.home && out.quality !== "poor" && out.quality !== "unavailable" && this.view.stage === "walking") {
-      void this.updateProfile({ home: { lat: pos.lat, lon: pos.lon } });
-      this.log("home_set", { radiusM: pr.homeRadiusM });
-    }
     this.tick(e.receivedAtMs);
   }
 
@@ -461,7 +450,7 @@ export class WalkSession {
     const km = Math.floor((this.engine?.s.metersWalked ?? 0) / OBSERVATION.everyM);
     if (km <= this.obsKm || !this.engine || !this.env) return;
     this.obsKm = km;
-    const c = planObservation(this.env, pos, this.view.profile?.id ?? "p1", tMs, km, this.inHomeArea);
+    const c = planObservation(this.env, pos, this.view.profile?.id ?? "p1", tMs, km);
     if (!c) return;
     this.engine.addObservation(c, tMs + OBSERVATION.durationMs);
     const dist = haversineM(pos, c.home);

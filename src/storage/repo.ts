@@ -17,15 +17,15 @@ export interface Profile {
   name: string;
   kind: "child" | "adult";
   lang: Lang;
-  /** Hemområdets radie (m), eller null = inget hemområde (spec: Säkerhet för barn – hemområde). */
-  homeRadiusM: number | null;
-  /** Hemområdets mitt. Sätts i inställningarna, eller där profilens första promenad startar. */
+  /**
+   * Hemområdet är borttaget (beslut 2026-11-22). Fälten finns kvar i lagrade profiler och exporter från tidigare versioner; de läses inte
+   * längre och nya profiler får null.
+   */
+  homeRadiusM?: number | null;
   home?: { lat: number; lon: number } | null;
   createdAt: number;
 }
 
-/** Standardradie för hemområdet (spec: 1 km för barnprofil). */
-export const CHILD_HOME_RADIUS_M = 1000;
 export const MAX_PROFILES = 8;
 
 export interface WalkMeta {
@@ -92,13 +92,13 @@ export class Repo {
   async lastExport(profileId: string): Promise<number | null> { return (await this.db.store<number>("meta").get(`lastExport:${profileId}`)) ?? null; }
   async setLastExport(profileId: string, t: number): Promise<void> { await this.db.store("meta").put(`lastExport:${profileId}`, t); }
 
-  /** Ny profil (spec: flera lokala profiler per telefon, utan inloggning). Barnprofiler får hemområde 1 km som standard. */
+  /** Ny profil (spec: flera lokala profiler per telefon, utan inloggning). */
   async createProfile(name: string, kind: Profile["kind"], lang: Lang, now = Date.now()): Promise<Profile> {
     const all = await this.profiles();
     if (all.length >= MAX_PROFILES) throw new Error("too many profiles");
     let n = all.length + 1;
     while (all.some((p) => p.id === `p${n}`)) n++;
-    const p: Profile = { id: `p${n}`, name: name.trim().slice(0, 30) || `Ranger ${n}`, kind, lang, homeRadiusM: kind === "child" ? CHILD_HOME_RADIUS_M : null, home: null, createdAt: now };
+    const p: Profile = { id: `p${n}`, name: name.trim().slice(0, 30) || `Ranger ${n}`, kind, lang, homeRadiusM: null, home: null, createdAt: now };
     await this.saveProfile(p);
     return p;
   }
