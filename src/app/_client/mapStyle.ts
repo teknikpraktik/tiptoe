@@ -45,7 +45,7 @@ export const PALETTE = {
   water: "#8fc1df",
   waterEdge: "#4e8fbf",
   waterway: "#5c9fd0",
-  path: "#4b4a45",
+  path: "#76726a",
   minor: "#fffaf0",
   minorCase: "#a8957a",
   major: "#f4cf86",

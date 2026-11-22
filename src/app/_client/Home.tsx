@@ -33,6 +33,7 @@ export function Home() {
   const [ios, setIos] = useState(false);
   const [warn, setWarn] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [howto, setHowto] = useState(false);
   const { setLang } = useLang();
   const [remind, setRemind] = useState(false);
   const [bg, setBg] = useState<string | null>(null);
@@ -71,6 +72,8 @@ export function Home() {
         <h1 className="title">{t("app.name")}</h1>
         <p className="sub">{t("app.subtitle")}</p>
         <p className="tagline">{t("app.tagline")}</p>
+        {/* Diskret länk i stället för en knapp till: startsidan ska ha få knappar. */}
+        <button className="howlink" onClick={() => setHowto(true)} data-testid="howto"><span aria-hidden="true">?</span>{t("howto.link")}</button>
       </header>
       <nav className="homenav">
         {!standalone && (
@@ -93,11 +96,16 @@ export function Home() {
         <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{going ? t("walk.resume") : t("home.startWalk")}</button>
         <Link className="btn ghost" href="/fieldbook" data-testid="home-fieldbook">{t("home.fieldbook")}</Link>
         <Link className="btn ghost" href="/settings" data-testid="home-settings">{t("home.settings")}</Link>
-        <div className="tests">
-          <span className="muted">{t("home.tests")}</span>
-          <Link className="btn small" href="/field">{t("home.field")}</Link>
-        </div>
       </nav>
+      {howto && (
+        <Modal title={t("howto.title")} onClose={() => setHowto(false)} actions={<button className="btn primary" onClick={() => setHowto(false)}>{t("howto.ok")}</button>}>
+          <ol className="howto" data-testid="howto-steps">
+            {(["walk", "tracks", "sneak", "photo", "reserve", "safety"] as const).map((k, i) => (
+              <li key={k}><span className="num" aria-hidden="true">{k === "safety" ? "!" : i + 1}</span><div><b>{t(`howto.${k}.title`)}</b><p>{t(`howto.${k}.body`)}</p></div></li>
+            ))}
+          </ol>
+        </Modal>
+      )}
       {picker && v && (
         <Modal title={t("home.switchProfile")} onClose={() => setPicker(false)} actions={<Link className="btn" href="/settings">{t("home.settings")}</Link>}>
           {v.profiles.map((x) => (

@@ -70,7 +70,6 @@ export const en: Record<MessageKey, string> = {
   "spike.metrics": "Measurements",
   "spike.copyReport": "Copy measurements",
   "spike.copied": "Copied",
-  "home.tests": "Tests (phase 1)",
 
 
 
@@ -95,6 +94,21 @@ export const en: Record<MessageKey, string> = {
   "menu.settingsHint": "Profile, language and backup",
   "menu.home": "Start screen",
   "menu.homeHint": "The walk continues in the background",
+  "howto.link": "How does it work?",
+  "howto.title": "How to play",
+  "howto.ok": "Let's go",
+  "howto.walk.title": "Go outside",
+  "howto.walk.body": "Start a walk. The map shows where you are, and the animals are around you in the real world.",
+  "howto.tracks.title": "Follow the tracks",
+  "howto.tracks.body": "Paw prints on the map lead to an animal. A ring is an animal close to you. Tap the ring to learn more.",
+  "howto.sneak.title": "Sneak and freeze",
+  "howto.sneak.body": "Walk slowly closer. If the animal looks at you, stand completely still, or it will flee.",
+  "howto.photo.title": "Take the photo",
+  "howto.photo.body": "When the camera button lights up, hold the phone up towards the animal and take the picture. Closer and sharper gives more stars, and new species go into your field book.",
+  "howto.reserve.title": "Create reserves",
+  "howto.reserve.body": "Walk a closed loop, for example around a block. The area becomes your reserve, and bigger reserves attract rarer animals.",
+  "howto.safety.title": "Safety",
+  "howto.safety.body": "Look up while you walk. Animals are never on roads or in water, so never follow one there.",
   "walk.menu": "Menu",
   "walk.points": "{n} pts",
   "walk.area": "{ha} ha",
@@ -179,7 +193,6 @@ export const en: Record<MessageKey, string> = {
   "field.debugOff": "Off (reloads)",
   "field.battery": "Measure battery by hand: note the percentage and brightness before and after the walk.",
   "field.current": "Walk in progress",
-  "home.field": "Field test",
 
   "field.compassLine": "compass {c} · gyro {g} · tilt {p}",
   "field.logTitle": `${BRAND.prose.en} field log`,
