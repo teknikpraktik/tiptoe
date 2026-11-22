@@ -180,12 +180,12 @@ export function Walk() {
         {v.stage === "idle" && <button className="btn primary" onClick={() => { audio.unlock(); void mapCompass.requestPermission(); void s.start(); }} data-testid="start">{t("walk.start")}</button>}
         {v.stage === "walking" && (
           <>
+            <button className="btn small" onClick={() => setConfirmEnd(true)} data-testid="end">{t("walk.end")}</button>
             {v.photoTarget && (
               <button className="btn primary camera" onClick={openCamera} disabled={!v.photoTarget.ready} data-testid="camera-btn">
                 {v.photoTarget.ready ? `${t("walk.camera")} · ${near ? t(`species.${near.species}`) : ""}` : v.photoTarget.why === "move" ? t("walk.standStill") : t("walk.gpsTooWeak")}
               </button>
             )}
-            <button className="btn small" onClick={() => setConfirmEnd(true)} data-testid="end">{t("walk.end")}</button>
           </>
         )}
       </div>

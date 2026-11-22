@@ -47,7 +47,8 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .homenav { display: flex; flex-direction: column; gap: 12px; max-width: 420px; width: 100%; margin: 0 auto; }
 
 /* Karta */
-.mapshell { position: fixed; inset: 0; overflow: hidden; }
+/* Hela skärmen även i en installerad iOS-app (stora viewporten), så att inget tomt band syns under kartan. */
+.mapshell { position: fixed; left: 0; right: 0; top: 0; height: 100vh; height: 100lvh; overflow: hidden; }
 /* Attributionsraden: 13 px text, och bara en del av iPhones hemindikatormarginal (texten får ligga strax ovanför indikatorn). */
 .mapshell { --attrib-h: 13px; --attrib-pad: max(2px, calc(var(--safe-bottom) - 20px)); --attrib-total: calc(var(--attrib-h) + var(--attrib-pad) + 2px); }
 .mapshell .map-canvas { position: absolute; inset: 0 0 calc(var(--attrib-total)) 0; } /* specificitet över maplibregl-map (position: relative) */
@@ -56,15 +57,17 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .statusbar { position: absolute; top: calc(22px + var(--safe-top)); left: 10px; right: 10px; display: flex; align-items: center; gap: 10px; z-index: 4; }
 .gps { padding: 6px 10px; border-radius: 999px; font-size: 13px; background: #1f231ccc; }
 .gps.q-ok { color: var(--good); } .gps.q-fair { color: var(--ink); } .gps.q-weak { color: var(--warn); } .gps.q-poor, .gps.q-unavailable { color: var(--bad); }
-.controls { position: absolute; left: 10px; right: 10px; bottom: calc(68px + var(--attrib-total)); display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; z-index: 4; }
+/* Nedersta raden: skalstock (vänster), knapparna (mitten) och kompassknappen (höger) på samma mittlinje, 48 px hög, strax ovanför
+   attributionen. Får knapparna inte plats bredvid varandra läggs den extra raden ovanför (wrap-reverse); Avsluta stannar nere. */
+.controls { position: absolute; left: 112px; right: 112px; bottom: calc(8px + var(--attrib-total)); min-height: 48px; display: flex; gap: 10px; align-items: center; align-content: center; justify-content: center; flex-wrap: wrap-reverse; z-index: 4; }
 .toast { position: absolute; left: 16px; right: 16px; top: calc(78px + var(--safe-top)); padding: 12px 14px; border-radius: var(--radius); background: #1f231ce6; text-align: center; z-index: 5; }
 .pmark { width: 40px; height: 40px; position: relative; }
 .pmark .arrow, .pmark .dot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .pmark .arrow { display: none; }
 .pmark.has-heading .arrow { display: flex; }
 .pmark.has-heading .dot { display: none; }
-.mapshell .maplibregl-ctrl-bottom-left { bottom: calc(var(--attrib-total)); }
-.mapshell .maplibregl-ctrl-bottom-left .maplibregl-ctrl { margin: 0 0 8px 10px; }
+.mapshell .maplibregl-ctrl-bottom-left { bottom: 0; } /* relativt kartytan, som redan slutar ovanför attributionen */
+.mapshell .maplibregl-ctrl-bottom-left .maplibregl-ctrl { margin: 0 0 21px 10px; } /* mitt på 48 px-raden (skalstocken är 22 px hög) */
 .maplibregl-ctrl-scale { background: #fbf9f3cc !important; color: #3c3d35 !important; border-color: #3c3d35 !important; }
 
 /* Dialog (Modal.tsx) */
