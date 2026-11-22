@@ -92,6 +92,15 @@ try {
   }
   check("smyga fram ger aktiv kameraknapp", !!target);
   if (target) {
+    // Tips första gången ett djur syns, och kortet när man trycker på djuret (arten är okänd tills den fotograferats).
+    check("tips visas första gången ett djur syns", (await page.getByTestId("hint").count()) > 0 || (await page.evaluate(() => localStorage.getItem("tiptoe.hint.animal"))) === "1");
+    await page.locator(`[data-testid="animal"][data-id="${target.id}"]`).click({ force: true });
+    const card = await page.getByTestId("animal-card").innerText({ timeout: 3000 }).catch(() => "");
+    check("tryck på djuret visar ett kort (okänt djur, avstånd)", /Okänt/.test(card) && /m bort/.test(card), card.replace(/\n/g, " · "));
+    check("tryck på djuret stänger inte av följ mig", (await page.getByText("Följ mig").count()) === 0);
+    await page.getByTestId("animal-card").click().catch(() => undefined);
+  }
+  if (target) {
     await page.waitForSelector('[data-testid="camera-btn"]:not([disabled])', { timeout: 5000 });
     // Telefonen riktas mot djuret (kompass = bäringen).
     const bearing = (Math.atan2((target.lon - p.longitude) * Math.cos((p.latitude * Math.PI) / 180), target.lat - p.latitude) * 180) / Math.PI;

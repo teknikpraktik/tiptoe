@@ -163,3 +163,8 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .warn-text { color: var(--warn); }
 .profilechip { align-self: center; background: transparent; border: 1px solid #ffffff22; color: var(--ink); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }
 .field select { min-height: 44px; border-radius: 10px; background: var(--bg); color: var(--ink); border: 1px solid #ffffff22; padding: 0 10px; font: inherit; }
+
+/* Tips första gången och kortet när man trycker på ett djur. */
+.toast.hint { top: auto; bottom: calc(150px + var(--safe-bottom)); background: #2b3a4ae8; color: var(--ink); font: inherit; border: 0; }
+.animalcard { position: absolute; left: 16px; right: 16px; bottom: calc(96px + var(--safe-bottom)); z-index: 6; display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border: 0; border-radius: var(--radius); background: #1f231cee; color: var(--ink); font: inherit; text-align: left; }
+.animalcard b { font-size: 17px; }

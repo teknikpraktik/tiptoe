@@ -23,6 +23,11 @@ const sentenceName = (name: string, first: boolean) => (first ? name : name.char
 
 const fmtHa = (m2: number) => (m2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1, minimumFractionDigits: m2 < 100_000 ? 1 : 0 });
 
+/** Storleksklass för ett okänt djur (en ledtråd utan att avslöja arten). */
+const sizeOf = (sp: SpeciesId): "small" | "medium" | "large" => (SPECIES[sp].heightM < 0.45 ? "small" : SPECIES[sp].heightM < 1 ? "medium" : "large");
+/** Vad djuret gör, för kortet. */
+const stateOf = (a: { state: string; look?: string }): "calm" | "alert" | "look" | "flee" => (a.state === "flee" ? "flee" : a.look === "look" || a.state === "look" ? "look" : a.state === "alert" || a.look === "warn" ? "alert" : "calm");
+
 /** Promenaden: kartan är spelet, allt annat ett tryck bort (spec: UX). */
 export function Walk() {
   const t = useT();
@@ -74,7 +79,24 @@ export function Walk() {
   }, [camera, ctx, manifest]);
   useEffect(() => { if (camera && (v?.tempo === "walk" || v?.tempo === "run")) setCamera(null); }, [camera, v?.tempo]);
 
-  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, look: a.look, label: t("walk.animalNear", { species: t(`species.${a.species}`), m: Math.round(a.distM) }) })), [v?.animals, t]);
+  // Arter man redan fotograferat visas med namn; andra är "okänt djur" (upptäckten är en del av spelet).
+  const known = useMemo(() => new Set(v?.score.species ?? []), [v?.score.species]);
+  const nameOf = useCallback((sp: SpeciesId) => (known.has(sp) ? t(`species.${sp}`) : t("animal.unknown")), [known, t]);
+  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, look: a.look, label: t("walk.animalNear", { species: nameOf(a.species), m: Math.round(a.distM) }) })), [v?.animals, t, nameOf]);
+  // Tryck på ett djur: ett kort med vad det är, hur långt bort och vad det gör. Stängs efter 6 s, vid tryck eller när djuret är borta.
+  const [picked, setPicked] = useState<string | null>(null);
+  const pickedAnimal = picked ? v?.animals.find((a) => a.id === picked && a.state !== "gone") ?? null : null;
+  useEffect(() => { if (!picked) return; const h = setTimeout(() => setPicked(null), 6000); return () => clearTimeout(h); }, [picked]);
+  // Tips första gången spår och djur syns (en gång per telefon).
+  const [hint, setHint] = useState<string | null>(null);
+  const hasTrail = (v?.trails.length ?? 0) > 0, hasAnimal = (v?.animals.length ?? 0) > 0;
+  useEffect(() => {
+    const key = hasAnimal ? "animal" : hasTrail ? "trail" : null;
+    if (!key || hint) return;
+    try { if (localStorage.getItem(`tiptoe.hint.${key}`)) return; localStorage.setItem(`tiptoe.hint.${key}`, "1"); } catch { return; }
+    setHint(t(`hint.${key}`));
+  }, [hasTrail, hasAnimal, hint, t]);
+  useEffect(() => { if (!hint) return; const h = setTimeout(() => setHint(null), 7000); return () => clearTimeout(h); }, [hint]);
   const reserves = useMemo(() => (v?.reserves ?? []).map((r) => r.rings), [v?.reserves]);
   const reserveLevels = useMemo(() => (v?.reserves ?? []).map((r) => levelForArea(r.areaM2)), [v?.reserves]);
   const sightings = useMemo(() => (v?.sightings ?? []).map((x) => ({ id: x.id, lat: x.lat, lon: x.lon, label: t(`species.${x.species}`) })), [v?.sightings, t]);
@@ -114,7 +136,7 @@ export function Walk() {
 
   return (
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
       <div className="statusbar" data-testid="status">
         <CloseButton href="/" />
         <span className={`gps q-${v.quality}`}>{t(`gps.quality.${v.quality}`)}{v.accuracyM != null && v.quality !== "unavailable" ? ` ${t("gps.accuracy", { m: Math.round(v.accuracyM) })}` : ""}</span>
@@ -128,6 +150,14 @@ export function Walk() {
       {v.stage === "walking" && v.env === "missing" && <div className="toast" role="alert">{t("walk.envMissing")}</div>}
       {v.storage === "none" && <div className="toast" role="alert">{t("walk.noStorage")}</div>}
       {toast && <div className="toast good" role="status" data-testid="reserve-toast">{toast}</div>}
+      {hint && !toast && !pickedAnimal && <button className="toast hint" onClick={() => setHint(null)} data-testid="hint">{hint}</button>}
+      {pickedAnimal && (
+        <button className="animalcard" onClick={() => setPicked(null)} data-testid="animal-card">
+          <b>{known.has(pickedAnimal.species) ? t(`species.${pickedAnimal.species}`) : t(`animal.unknownSize.${sizeOf(pickedAnimal.species)}`)}</b>
+          <span>{t("animal.distance", { m: Math.round(pickedAnimal.distM) })} · {t(`animal.state.${stateOf(pickedAnimal)}`)}</span>
+          <span className="muted">{t(`animal.tip.${stateOf(pickedAnimal)}`)}</span>
+        </button>
+      )}
       {v.stage === "walking" && v.freeze && <div className={`freeze ${v.freeze}`} role="alert" data-testid="freeze">{v.freeze === "look" ? t("walk.freeze") : t("walk.freezeWarn")}</div>}
       {v.stage === "walking" && v.levelInfo && (
         <div className="levelbar" data-testid="level">

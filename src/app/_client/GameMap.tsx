@@ -9,7 +9,8 @@ import { Map as MapLibreMap, Marker, ScaleControl, setWorkerUrl, type GeoJSONSou
 import { useEffect, useRef, useState } from "react";
 import { haversineM, type LatLon } from "@/geo/geometry";
 import { wrap180 } from "@/sensors/heading";
-import { MAP_ATTRIBUTION, MAP_STYLE, MARSH_PATTERN, marshPattern } from "./mapStyle";
+import { MAP_ATTRIBUTION, MAP_STYLE, MARSH_PATTERN, PAW_IMAGE, marshPattern, pawImage } from "./mapStyle";
+import { bearingDeg } from "@/geo/geometry";
 
 const fc = (features: GeoJSON.Feature[] = []): GeoJSON.FeatureCollection => ({ type: "FeatureCollection", features });
 const line = (pts: LatLon[], props: Record<string, unknown> = {}): GeoJSON.Feature => ({ type: "Feature", properties: props, geometry: { type: "LineString", coordinates: pts.map((p) => [p.lon, p.lat]) } });
@@ -88,7 +89,9 @@ export default function GameMap(props: GameMapProps) {
     mapRef.current = map;
     map.touchZoomRotate.disableRotation();
     if (propsRef.current.scale) map.addControl(new ScaleControl({ maxWidth: 90, unit: "metric" }), "bottom-left");
-    const takeOver = () => {
+    const takeOver = (e: Event) => {
+      // Ett tryck på ett djur är inte att ta över kartan.
+      if ((e.target as Element | null)?.closest?.(".amark")) return;
       if (!propsRef.current.follow || manual.current) return;
       manual.current = true;
       propsRef.current.onUserMove?.();
@@ -101,7 +104,10 @@ export default function GameMap(props: GameMapProps) {
       if (tileErrors++ < 3) propsRef.current.onError?.(String((e as unknown as { error?: { message?: string } }).error?.message ?? "map error"));
     });
     // Myrens mönster ritas i koden (inga sprites).
-    map.on("styleimagemissing", (e) => { if (e.id === MARSH_PATTERN && !map.hasImage(MARSH_PATTERN)) map.addImage(MARSH_PATTERN, marshPattern()); });
+    map.on("styleimagemissing", (e) => {
+      if (e.id === MARSH_PATTERN && !map.hasImage(MARSH_PATTERN)) map.addImage(MARSH_PATTERN, marshPattern());
+      if (e.id === PAW_IMAGE && !map.hasImage(PAW_IMAGE)) map.addImage(PAW_IMAGE, pawImage(), { pixelRatio: 2 });
+    });
     map.on("load", () => {
       map.addSource("acc", { type: "geojson", data: fc() });
       map.addLayer({ id: "acc", type: "fill", source: "acc", paint: { "fill-color": "#2f7fd8", "fill-opacity": 0.1 } });
@@ -113,7 +119,8 @@ export default function GameMap(props: GameMapProps) {
       map.addSource("home", { type: "geojson", data: fc() });
       map.addLayer({ id: "home", type: "line", source: "home", paint: { "line-color": "#4a5a3f", "line-width": 1.5, "line-opacity": 0.6, "line-dasharray": [4, 3] } });
       map.addSource("trails", { type: "geojson", data: fc() });
-      map.addLayer({ id: "trails", type: "circle", source: "trails", paint: { "circle-radius": 2.6, "circle-color": "#7a4a1e", "circle-opacity": ["get", "o"], "circle-stroke-color": "#fbf9f3", "circle-stroke-width": 0.8 } });
+      // Djurspår: tassavtryck vridna längs spåret mot djuret, omväxlande vänster och höger fot.
+      map.addLayer({ id: "trails", type: "symbol", source: "trails", layout: { "icon-image": PAW_IMAGE, "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.6, 18, 1.1], "icon-rotate": ["get", "r"], "icon-rotation-alignment": "map", "icon-offset": ["get", "off"], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": ["get", "o"] } });
       map.addSource("track", { type: "geojson", data: fc() });
       // Spåret där man gått: ljus kant under och en tydlig orange linje, som på en friluftsapp.
       map.addLayer({ id: "walked-case", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 18, 9], "line-opacity": 0.9 } });
@@ -152,8 +159,12 @@ export default function GameMap(props: GameMapProps) {
   useEffect(() => { if (loaded) src("home", fc(home ? [circle(home.center, home.radiusM)] : [])); }, [loaded, home?.center.lat, home?.center.lon, home?.radiusM]);
   useEffect(() => {
     if (!loaded) return;
-    // Prickarna tonar fram mot djuret (spåren blir färskare).
-    src("trails", fc((props.trails ?? []).flatMap((tr) => tr.points.map((p, i) => ({ type: "Feature", properties: { o: 0.35 + (0.55 * (i + 1)) / tr.points.length }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }) as GeoJSON.Feature))));
+    // Tassarna tonar fram mot djuret (spåren blir färskare). Sista punkten ligger närmast djuret; riktningen är mot nästa punkt.
+    src("trails", fc((props.trails ?? []).flatMap((tr) => tr.points.map((p, i) => {
+      const a = tr.points[Math.min(i, tr.points.length - 2)], b = tr.points[Math.min(i + 1, tr.points.length - 1)];
+      const r = tr.points.length > 1 ? bearingDeg(a, b) : 0;
+      return { type: "Feature", properties: { o: 0.4 + (0.6 * (i + 1)) / tr.points.length, r, off: [i % 2 ? 5 : -5, 0] }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } } as GeoJSON.Feature;
+    }))));
   }, [loaded, props.trails]);
   // Observationer: en pulserande ring där arten sågs (ungefärligt).
   const sightingMarkers = useRef(new Map<string, Marker>());
