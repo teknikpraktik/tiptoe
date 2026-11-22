@@ -24,9 +24,9 @@ describe("djurbilder (manifestet)", () => {
 });
 
 describe("riktiga bilder", () => {
-  it("alla arter utom rådjuret har riktiga bilder med trekvart och vilopose; rådjuret är platshållare", () => {
+  it("alla arter har riktiga bilder med alla vyer och poser; inga platshållare kvar", () => {
     const real = ALL_SPECIES.filter((id) => manifest.species[id].placeholder === false);
-    expect(ALL_SPECIES.filter((id) => !real.includes(id))).toEqual(["roe_deer"]);
+    expect(ALL_SPECIES.filter((id) => !real.includes(id))).toEqual([]);
     for (const id of real) {
       const v = manifest.species[id].views;
       for (const view of ["side", "quarter", "front", "back"] as const) for (const pose of ["calm", "alert", "rest"] as const) {
