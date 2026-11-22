@@ -187,3 +187,8 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .compassbtn .needle .n { top: 0; border-bottom: 15px solid #d9452b; }
 .compassbtn .needle .s { bottom: 0; border-top: 15px solid #9a9488; }
 .compassbtn.on .needle .s { border-top-color: #e8e2d2; }
+
+/* Inställningar: profilväljare och formuläret för ny profil. */
+.profilepick { display: flex; flex-wrap: wrap; gap: 8px; }
+.subcard { padding: 12px; border-radius: 12px; background: #00000022; }
+.btn.danger { color: var(--bad); }

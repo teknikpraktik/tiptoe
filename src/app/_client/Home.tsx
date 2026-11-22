@@ -106,8 +106,12 @@ export function Home() {
       {picker && v && (
         <Modal title={t("home.switchProfile")} onClose={() => setPicker(false)} actions={<Link className="btn" href="/settings">{t("home.settings")}</Link>}>
           {v.profiles.map((x) => (
-            <button key={x.id} className={`btn wide ${x.id === v.profile?.id ? "on" : ""}`} style={{ marginBottom: 8 }} disabled={going && x.id !== v.profile?.id}
-              onClick={async () => { if (ctx && x.id !== v.profile?.id) { await ctx.session.switchProfile(x.id); setLang(x.lang); } setPicker(false); }}>{x.name}</button>
+            <button key={x.id} className={`btn wide ${x.id === v.profile?.id ? "on" : ""}`} style={{ marginBottom: 8 }}
+              onClick={async () => {
+                // Under en promenad: den pausas och sparas (och fortsätter när man byter tillbaka).
+                if (ctx && x.id !== v.profile?.id && (v.stage !== "walking" || confirm(t("settings.switchWhileWalking")))) { if (await ctx.session.switchProfile(x.id)) setLang(x.lang); }
+                setPicker(false);
+              }}>{x.name}</button>
           ))}
         </Modal>
       )}

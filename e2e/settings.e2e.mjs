@@ -9,6 +9,8 @@ try {
   check("startsidan visar aktiv profil", /Profil: Ranger/.test(await page.getByTestId("profile-chip").innerText()));
   await page.getByTestId("home-settings").click();
   await page.waitForURL("**/settings/");
+  check("en sektion för profilen (inte två)", (await page.locator("section h3", { hasText: /^Profil/ }).count()) === 1);
+  await page.getByTestId("add-profile").click();
   await page.getByTestId("new-name").fill("Alva");
   await page.getByTestId("create-profile").click();
   await page.waitForFunction(() => /Alva.*Aktiv/s.test(document.querySelector('[data-testid="settings-profiles"]')?.textContent ?? ""), null, { timeout: 5000 });
@@ -33,6 +35,17 @@ try {
   await page.getByTestId("profile-chip").waitFor();
   await page.waitForFunction(() => /Ranger/.test(document.querySelector('[data-testid="profile-chip"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
   check("valet överlever omladdning", /Profil: Ranger/.test(await page.getByTestId("profile-chip").innerText()));
+  // Byte under en pågående promenad: tidigare var knapparna låsta. Nu pausas promenaden (efter bekräftelse) och bytet går igenom.
+  page.on("dialog", (d) => void d.accept());
+  await page.getByTestId("home-start").click();
+  await page.getByTestId("play-anyway").click({ timeout: 5000 }).catch(() => undefined);
+  await page.waitForURL("**/walk/");
+  await page.waitForSelector('[data-testid="map"][data-loaded="true"]', { timeout: 20000 });
+  await page.goto(base + "/settings/");
+  await page.getByTestId("profile-Alva").click();
+  await page.waitForFunction(() => /Alva · /.test(document.querySelector('[data-testid="settings-profiles"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
+  check("profilbyte mitt i en promenad fungerar", /Alva · Active|Alva · Aktiv/.test(await page.getByTestId("settings-profiles").innerText()), (await page.getByTestId("settings-profiles").innerText()).split("\n").slice(0, 3).join(" | "));
+  await page.screenshot({ path: `${OUT}/02-settings.png`, fullPage: true });
 } catch (e) {
   check("oväntat fel", false, String(e));
 } finally {

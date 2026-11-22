@@ -102,4 +102,35 @@ describe("promenadsessionen", () => {
     void target;
     a.db.close();
   });
+
+  it("profilbyte under en promenad pausar och sparar den; tillbaka på profilen fortsätter den", async () => {
+    const a = await setup("tiptoe-test-switch");
+    await a.s.init("sv");
+    const first = a.s.getView().profile!;
+    await a.s.start();
+    a.fix(simPoint(-500, 300));
+    await a.walkTo([-500, 300], [-500, 420]);
+    const track = a.s.getView().track.length;
+    expect(track).toBeGreaterThan(10);
+    const other = await a.s.createProfile("Alva", "child", "sv");
+    expect(other).not.toBeNull();
+    let v = a.s.getView();
+    expect(v.profile!.id).toBe(other!.id);
+    expect(v.stage).toBe("idle");
+    expect(v.track.length).toBe(0);
+    // Tillbaka: promenaden är pausad med spåret kvar och kan fortsätta.
+    expect(await a.s.switchProfile(first.id)).toBe(true);
+    v = a.s.getView();
+    expect(v.profile!.id).toBe(first.id);
+    expect(v.stage).toBe("paused");
+    expect(v.track.length).toBe(track);
+    await a.s.start();
+    expect(a.s.getView().stage).toBe("walking");
+    // Att radera en annan profil påverkar inte den pågående promenaden.
+    expect(await a.s.deleteProfile(other!.id)).toBe(true);
+    expect(a.s.getView().stage).toBe("walking");
+    expect(a.s.getView().profiles.map((x) => x.id)).toEqual([first.id]);
+    await a.s.end();
+    a.db.close();
+  });
 });

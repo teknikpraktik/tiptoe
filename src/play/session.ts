@@ -198,10 +198,30 @@ export class WalkSession {
   }
 
   // ---------- profiler (spec: flera lokala profiler per telefon) ----------
-  private canChangeProfile() { return this.d.repo && this.view.stage !== "walking"; }
+  /**
+   * Pausa en pågående promenad: sensorerna stängs och läget sparas (ögonblicksbild, spår, fältlogg). Promenaden ligger kvar som aktiv för
+   * profilen och återupptas därifrån (samma väg som efter en omstart av appen).
+   */
+  async pause(): Promise<void> {
+    if (this.view.stage !== "walking") return;
+    this.stopSensors();
+    this.setAmbience("none");
+    this.sound.reset();
+    await this.releaseWakeLock();
+    await this.saveSnapshot();
+    const w = this.view.walk, repo = this.d.repo;
+    if (w && repo) await repo.saveWalk({ ...w, trackPoints: this.track.length });
+    if (this.fieldLog && repo) await this.fieldLog.save(repo.db).catch(() => undefined);
+    this.log("walk_pause", { walk: w?.id });
+    this.set({ stage: "paused", animals: [], photoTarget: null, freeze: null });
+  }
+  private canChangeProfile() { return !!this.d.repo; }
+  /** Byt profil. En pågående promenad pausas och sparas först; den fortsätter när man byter tillbaka. */
   async switchProfile(id: string): Promise<boolean> {
     const repo = this.d.repo;
     if (!repo || !this.canChangeProfile()) return false;
+    if (id === this.view.profile?.id) return true;
+    await this.pause();
     const p = (await repo.profiles()).find((x) => x.id === id);
     if (!p) return false;
     await repo.setActiveProfile(id);
@@ -226,7 +246,11 @@ export class WalkSession {
   async deleteProfile(id: string): Promise<boolean> {
     const repo = this.d.repo;
     if (!repo || !this.canChangeProfile() || this.view.profiles.length <= 1) return false;
+    const wasActive = id === this.view.profile?.id;
+    if (wasActive) await this.pause();
     await repo.deleteProfile(id);
+    // En annan profil raderas: den aktiva (och en pågående promenad) påverkas inte.
+    if (!wasActive) { this.set({ profiles: (await repo.profiles()).sort((a, b) => a.createdAt - b.createdAt) }); return true; }
     const next = await repo.ensureProfile(this.view.profile?.lang ?? "sv", this.now());
     await repo.setActiveProfile(next.id);
     await this.loadProfile(next);
