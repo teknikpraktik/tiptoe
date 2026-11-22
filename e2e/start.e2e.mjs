@@ -9,7 +9,18 @@ try {
   await page.waitForFunction(() => !document.querySelector('[data-testid="home-start"]')?.hasAttribute("disabled"), null, { timeout: 10000 });
   check("startsidan visar Starta promenad", (await page.getByTestId("home-start").innerText()).includes("Starta promenad"));
   check("uppmaning att installera före första promenaden", await page.getByTestId("install").isVisible());
+  // Varumärket SPÅR: logotyp, webbläsartitel, iOS-titel, manifest; ringen över Å klipps inte.
+  check("logotypen heter SPÅR", (await page.locator("h1.title").innerText()).trim() === "SPÅR");
+  check("webbläsarens titel", (await page.title()) === "SPÅR – Wildlife Adventure", await page.title());
+  check("iOS-appens namn (apple-mobile-web-app-title)", (await page.locator('meta[name="apple-mobile-web-app-title"]').getAttribute("content")) === "SPÅR");
+  check("Open Graph-titel", (await page.locator('meta[property="og:title"]').getAttribute("content")) === "SPÅR – Wildlife Adventure");
+  const man = await page.evaluate(async () => (await fetch("/manifest.webmanifest")).json());
+  check("manifestet: name och short_name SPÅR", man.name === "SPÅR" && man.short_name === "SPÅR", `${man.name}/${man.short_name}`);
+  const clip = await page.evaluate(() => { const h = document.querySelector("h1.title"); const r = document.createRange(); r.selectNodeContents(h); const t = r.getBoundingClientRect(), b = h.getBoundingClientRect(); return { textTop: t.top, boxTop: b.top, overflow: h.scrollHeight - h.clientHeight }; });
+  check("logotypen klipps inte (Å får plats)", clip.textTop >= clip.boxTop - 0.5 && clip.overflow <= 1, JSON.stringify(clip));
+  check("svensk slogan", (await page.locator(".homehead .sub").innerText()).includes("Upptäck djuren"));
   await page.screenshot({ path: `${OUT}/01-start.png` });
+  await page.waitForFunction(() => !document.querySelector('[data-testid="home-start"]')?.hasAttribute("disabled"), null, { timeout: 10000 });
   await page.getByTestId("home-start").click();
   // Webbläsarläge (inte installerad): varningen visas, spela ändå.
   await page.getByTestId("play-anyway").click({ timeout: 5000 });

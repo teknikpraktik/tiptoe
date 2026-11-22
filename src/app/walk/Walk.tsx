@@ -16,6 +16,7 @@ import { useSession, useWalkView } from "../_client/SessionProvider";
 import { shareOrDownload } from "../_client/share";
 import { audio } from "../_client/audio";
 
+
 const GameMap = dynamic(() => import("../_client/GameMap"), { ssr: false });
 
 
@@ -220,7 +221,7 @@ export function Walk() {
       {result && (
         <Modal title={result.r && !result.missed ? t(`species.${result.r.species}`) : t("result.title")} onClose={() => { URL.revokeObjectURL(result.url); setResult(null); }} actions={<>
           <button className="btn primary" onClick={() => { URL.revokeObjectURL(result.url); setResult(null); }} data-testid="result-ok">{t("result.continue")}</button>
-          <button className="btn" onClick={() => void shareOrDownload(result.blob, `tiptoe-${Date.now()}.jpg`, t("camera.photoTitle"))}>{t("camera.share")}</button>
+          <button className="btn" onClick={() => void shareOrDownload(result.blob, `djurfoto-${Date.now()}.jpg`, t("camera.photoTitle"))}>{t("camera.share")}</button>
         </>}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={result.url} alt="" className="photo" />

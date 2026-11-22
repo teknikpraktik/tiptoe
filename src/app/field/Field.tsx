@@ -18,6 +18,7 @@ import { useT } from "../_client/i18n";
 import { isStandalone } from "../_client/install";
 import { shareOrDownload } from "../_client/share";
 import { Repo } from "@/storage/repo";
+import { asciiFileName } from "@/config/brand";
 
 /** Diagnostiksidan för fälttestet (spec/prompt steg 6): GPS, lagring, persist(), wake lock, sensorer och exporterbar logg. */
 export function Field() {
@@ -75,7 +76,7 @@ export function Field() {
     const profileId = v?.profile?.id ?? "p1";
     const track = repo ? await repo.track(profileId, l.walkId) : [];
     const body = JSON.stringify({ ...l, track: track.map((p) => [p.tMs, Math.round(p.lat * 1e6) / 1e6, Math.round(p.lon * 1e6) / 1e6, Math.round(p.accuracyM)]) }, null, 1);
-    await shareOrDownload(new Blob([body], { type: "application/json" }), `tiptoe-log-${l.walkId}.json`, t("field.logTitle"));
+    await shareOrDownload(new Blob([body], { type: "application/json" }), asciiFileName(`faltlogg-${l.walkId}.json`), t("field.logTitle"));
   };
   const toggleDebug = () => { try { localStorage.setItem("tiptoe.debug", debugEnabled() ? "off" : "on"); } catch { /* privat läge */ } location.reload(); };
   const current = ctx?.session.currentLog()?.data;

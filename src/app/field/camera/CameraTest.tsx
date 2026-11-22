@@ -12,6 +12,7 @@ import { createOrientationSource, type OrientationStatus } from "../../_client/o
 import { shareOrDownload } from "../../_client/share";
 
 
+
 interface LogLine { t: number; event: string; data?: Record<string, unknown> }
 
 /**
@@ -97,7 +98,7 @@ export function CameraTest() {
             <img src={shot.url} alt="" className="photo" data-testid="photo" />
             <p className="muted">{t("camera.saved")} {shot.r.width}×{shot.r.height}, {Math.round(shot.blob.size / 1024)} kB</p>
             <div className="row">
-              <button className="btn" onClick={async () => add("share", { result: await shareOrDownload(shot.blob, `tiptoe-${Date.now()}.jpg`, t("camera.photoTitle")) })}>{t("camera.share")}</button>
+              <button className="btn" onClick={async () => add("share", { result: await shareOrDownload(shot.blob, `kameratest-${Date.now()}.jpg`, t("camera.photoTitle")) })}>{t("camera.share")}</button>
               <button className="btn ghost" onClick={openCamera}>{t("camera.again")}</button>
             </div>
           </div>

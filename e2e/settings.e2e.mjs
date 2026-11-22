@@ -22,6 +22,8 @@ try {
   await page.goto(base + "/");
   await page.getByTestId("profile-chip").waitFor();
   check("startsidan på engelska med Alva", /Profile: Alva/.test(await page.getByTestId("profile-chip").innerText()));
+  check("engelska: produktnamnet är SPÅR och sloganen engelsk", (await page.locator("h1.title").innerText()).trim() === "SPÅR" && (await page.locator(".homehead .sub").innerText()).includes("Make your mark"));
+  await page.screenshot({ path: `${OUT}/start-en.png` });
   // Byt tillbaka till Ranger via profilväljaren: språket följer profilen (svenska).
   await page.getByTestId("profile-chip").click();
   await page.getByRole("button", { name: "Ranger", exact: true }).click();

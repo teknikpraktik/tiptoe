@@ -1,9 +1,10 @@
+import { BRAND } from "@/config/brand";
 import type { MessageKey } from "./sv";
 
 /** English dictionary. Must have exactly the same keys as `sv.ts` (TypeScript and src/tests/unit/i18n.test.ts check it). */
 export const en: Record<MessageKey, string> = {
-  "app.name": "Tiptoe",
-  "app.subtitle": "Wild Encounters",
+  "app.name": BRAND.name,
+  "app.subtitle": BRAND.slogan.en,
   "app.tagline": "Get close before it flees.",
 
   "common.close": "Close",
@@ -11,7 +12,7 @@ export const en: Record<MessageKey, string> = {
   "common.cancel": "Cancel",
   "common.ok": "OK",
   "common.update": "Update",
-  "common.updateAvailable": "A new version of Tiptoe is available.",
+  "common.updateAvailable": `A new version of ${BRAND.prose.en} is available.`,
 
   "home.startWalk": "Start walk",
   "home.fieldbook": "Field book",
@@ -57,7 +58,7 @@ export const en: Record<MessageKey, string> = {
   "camera.saved": "The photo is saved in the app.",
   "camera.share": "Save to Photos / share",
   "camera.again": "Take another",
-  "camera.photoTitle": "Tiptoe photo",
+  "camera.photoTitle": `${BRAND.prose.en} photo`,
 
   "spike.title": "Camera test",
   "spike.intro": "A placeholder roe deer is placed in front of you. Turn the phone, take a photo and save it to Photos. Check that the animal stays on the ground when you turn.",
@@ -123,9 +124,9 @@ export const en: Record<MessageKey, string> = {
 
   "home.stats": "{points} points · {species} of {total} species · {ha} ha of reserves",
 
-  "install.title": "Install Tiptoe first",
+  "install.title": `Install ${BRAND.prose.en} first`,
   "install.why": "Install the app on your home screen before your first walk. The camera, GPS and your finds then get their own, safer place on the phone.",
-  "install.ios": "iPhone: tap the Share button in Safari and choose Add to Home Screen. Then open Tiptoe from the home screen.",
+  "install.ios": `iPhone: tap the Share button in Safari and choose Add to Home Screen. Then open ${BRAND.prose.en} from the home screen.`,
   "install.android": "Android: tap Install below, or choose Install app in Chrome's menu.",
   "install.button": "Install",
   "install.browserTitle": "You are playing in the browser",
@@ -171,7 +172,7 @@ export const en: Record<MessageKey, string> = {
   "home.field": "Field test",
 
   "field.compassLine": "compass {c} · gyro {g} · tilt {p}",
-  "field.logTitle": "Tiptoe log",
+  "field.logTitle": `${BRAND.prose.en} field log`,
   "field.source.motion": "sensor",
   "field.source.gps": "GPS speed",
 
@@ -295,10 +296,10 @@ export const en: Record<MessageKey, string> = {
   "backup.replace": "Replace {name}",
   "backup.replaceConfirm": "Replace the profile {name}? Everything in it now is lost and replaced by the file's content.",
   "backup.imported": "The profile {name} has been imported.",
-  "backup.error.not_zip": "The file is not a Tiptoe export (not a zip file).",
+  "backup.error.not_zip": `The file is not a ${BRAND.prose.en} export (not a zip file).`,
   "backup.error.too_big": "The file is too large.",
-  "backup.error.wrong_format": "The file is not a Tiptoe export.",
-  "backup.error.newer_schema": "The file comes from a newer version of Tiptoe. Update the app first.",
+  "backup.error.wrong_format": `The file is not a ${BRAND.prose.en} export.`,
+  "backup.error.newer_schema": `The file comes from a newer version of ${BRAND.prose.en}. Update the app first.`,
   "backup.error.invalid_data": "The file is damaged or altered and cannot be read.",
   "backup.error.missing_photo": "The file is missing photos and cannot be read.",
   "backup.reminder": "You haven't exported your finds for a while. Make a backup in the settings.",

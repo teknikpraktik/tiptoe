@@ -1,4 +1,4 @@
-/* Tiptoe – en global stilmall (ingen CSS-ram). Filmisk, lätt mystisk, ljusare och varmare än Outbreak. */
+/* SPÅR (tidigare arbetsnamn Tiptoe) – en global stilmall (ingen CSS-ram). Filmisk, lätt mystisk, ljusare och varmare än Outbreak. */
 :root {
   --bg: #1f231c;
   --bg2: #2b2f27;
@@ -36,8 +36,9 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .homehead .tagline { color: #e8e2d2; }
 .fbhead { background-size: cover; background-position: center; }
 .homehead { text-align: center; margin-top: 12vh; }
-.title { font-size: 56px; font-weight: 800; letter-spacing: 0.02em; }
-.sub { margin: 4px 0 0; font-size: 15px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); }
+/* Logotypen SPÅR: ringen över Å får plats (radhöjd och luft ovanför), versaler med lite spärrning. */
+.title { margin: 0; padding-top: 0.12em; font-size: 60px; line-height: 1.15; font-weight: 800; letter-spacing: 0.12em; margin-right: -0.12em; }
+.sub { margin: 8px 0 0; font-size: 15px; letter-spacing: 0.02em; color: var(--accent); font-weight: 600; }
 .tagline { margin: 24px 0 0; color: var(--muted); font-style: italic; }
 .homenav { display: flex; flex-direction: column; gap: 12px; max-width: 420px; width: 100%; margin: 0 auto; }
 
