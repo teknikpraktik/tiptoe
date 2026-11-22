@@ -132,37 +132,64 @@
    "views": {
     "side": {
      "calm": {
-      "src": "/animals/placeholder/roe_deer-side-calm.png",
-      "aspect": 1.502
+      "src": "/animals/roe_deer/side-stand.webp",
+      "aspect": 0.922
      },
      "alert": {
-      "src": "/animals/placeholder/roe_deer-side-alert.png",
-      "aspect": 0.932
+      "src": "/animals/roe_deer/front-lie.webp",
+      "aspect": 1.079
+     },
+     "rest": {
+      "src": "/animals/roe_deer/quarter-lie.webp",
+      "aspect": 1.108
+     }
+    },
+    "quarter": {
+     "calm": {
+      "src": "/animals/roe_deer/side-stand.webp",
+      "aspect": 0.922
+     },
+     "alert": {
+      "src": "/animals/roe_deer/front-lie.webp",
+      "aspect": 1.079
+     },
+     "rest": {
+      "src": "/animals/roe_deer/quarter-lie.webp",
+      "aspect": 1.108
      }
     },
     "front": {
      "calm": {
-      "src": "/animals/placeholder/roe_deer-front-calm.png",
-      "aspect": 0.55
+      "src": "/animals/roe_deer/quarter-stand.webp",
+      "aspect": 0.578
      },
      "alert": {
-      "src": "/animals/placeholder/roe_deer-front-alert.png",
-      "aspect": 0.37
+      "src": "/animals/roe_deer/quarter-stand.webp",
+      "aspect": 0.578
+     },
+     "rest": {
+      "src": "/animals/roe_deer/quarter-lie.webp",
+      "aspect": 1.108
      }
     },
     "back": {
      "calm": {
-      "src": "/animals/placeholder/roe_deer-back-calm.png",
-      "aspect": 0.52
+      "src": "/animals/roe_deer/side-stand.webp",
+      "aspect": 0.922
      },
      "alert": {
-      "src": "/animals/placeholder/roe_deer-back-alert.png",
-      "aspect": 0.378
+      "src": "/animals/roe_deer/front-lie.webp",
+      "aspect": 1.079
+     },
+     "rest": {
+      "src": "/animals/roe_deer/quarter-lie.webp",
+      "aspect": 1.108
      }
     }
    },
-   "license": "placeholder (egen, fri)",
-   "placeholder": true
+   "license": "Levererad av Per 2026-11-22 (AI-genererad). Licensvillkor för kommersiellt bruk ska dokumenteras här.",
+   "placeholder": false,
+   "source": "rad 1: går (sida), framifrån, betar; rad 2: springer, ligger framifrån, skäller (huvudet upp)"
   },
   "red_fox": {
    "views": {
