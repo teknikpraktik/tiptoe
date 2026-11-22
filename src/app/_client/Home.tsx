@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ALL_SPECIES } from "@/engine/species";
 import { titleFor } from "@/engine/progress";
-import { dayPhase } from "@/engine/sun";
 import { Repo } from "@/storage/repo";
 import { exportReminder } from "@/storage/reminder";
 import { audio } from "./audio";
@@ -15,19 +14,13 @@ import { installPrompt, isIos, isStandalone } from "./install";
 import { Modal } from "./Modal";
 import { useSession, useWalkView } from "./SessionProvider";
 
-/** Startsidans bakgrunder per dygnsfas. Inom en fas byts bilden en gång per dygn (samma bild hela dagen). */
-export const HOME_BACKGROUNDS: Record<"dawn" | "day" | "dusk" | "night", string[]> = {
-  dawn: ["dawn", "dawn-lake"],
-  day: ["day", "day-moss", "day-birch"],
-  dusk: ["dusk-spruce", "dusk-boardwalk"],
-  night: ["night"],
-};
+/** Startsidans bakgrunder: bara ljusa, glada bilder (sol, grönska, gyllene ljus). En per dag, samma hela dagen. */
+export const HOME_BACKGROUNDS = ["day-birch", "day", "dawn-lake", "dusk-boardwalk", "day-moss", "dawn"] as const;
 
-/** Startsidans bakgrund efter dygnets fas (mitt i Sverige) och dagens datum. */
-export function homeBackground(tMs: number, lat = 60, lon = 15): string {
-  const set = HOME_BACKGROUNDS[dayPhase(tMs, lat, lon)];
+/** Startsidans bakgrund för dagens datum. */
+export function homeBackground(tMs: number): string {
   const day = Math.floor(tMs / 86_400_000);
-  return `/backgrounds/${set[day % set.length]}.webp`;
+  return `/backgrounds/${HOME_BACKGROUNDS[day % HOME_BACKGROUNDS.length]}.webp`;
 }
 
 /** Startskärmen: namnet, Starta promenad, (senare) fältdagbok och inställningar, och uppmaningen att installera före första promenaden. */
@@ -71,7 +64,7 @@ export function Home() {
   const start = () => (!standalone && !going ? setWarn(true) : void go());
 
   return (
-    <main className="home" style={bg ? { backgroundImage: `linear-gradient(rgba(20,24,18,.55), rgba(20,24,18,.35) 35%, rgba(20,24,18,.88) 70%), url(${bg})` } : undefined}>
+    <main className="home" style={bg ? { backgroundImage: `linear-gradient(rgba(20,24,18,.45), rgba(20,24,18,.12) 30%, rgba(20,24,18,.1) 48%, rgba(20,24,18,.82) 72%), url(${bg})` } : undefined}>
       <header className="homehead">
         <h1 className="title">{t("app.name")}</h1>
         <p className="sub">{t("app.subtitle")}</p>

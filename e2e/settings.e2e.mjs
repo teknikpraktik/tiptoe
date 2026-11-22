@@ -46,6 +46,16 @@ try {
   await page.waitForFunction(() => /Alva · /.test(document.querySelector('[data-testid="settings-profiles"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
   check("profilbyte mitt i en promenad fungerar", /Alva · Active|Alva · Aktiv/.test(await page.getByTestId("settings-profiles").innerText()), (await page.getByTestId("settings-profiles").innerText()).split("\n").slice(0, 3).join(" | "));
   await page.screenshot({ path: `${OUT}/02-settings.png`, fullPage: true });
+  // Profilväljaren på startsidan går att använda flera gånger i rad, även när en profil har en pausad promenad (förr bara en gång).
+  await page.goto(base + "/");
+  await page.getByTestId("profile-chip").waitFor();
+  let ok = true;
+  for (const name of ["Ranger", "Alva", "Ranger", "Alva"]) {
+    await page.getByTestId("profile-chip").click();
+    await page.getByRole("button", { name, exact: true }).click({ timeout: 3000 }).catch(() => { ok = false; });
+    await page.waitForFunction((n) => (document.querySelector('[data-testid="profile-chip"]')?.textContent ?? "").includes(n), name, { timeout: 3000 }).catch(() => { ok = false; });
+  }
+  check("profilväljaren byter profil flera gånger i rad", ok);
 } catch (e) {
   check("oväntat fel", false, String(e));
 } finally {
