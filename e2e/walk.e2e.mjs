@@ -47,13 +47,14 @@ try {
   check("kompassknappens nål pekar mot norr på kartan", wrapDiff(needleDeg, 90) < 5, `${needleDeg}°`);
   // Norr upp finns i menyn (tillsammans med ljudet).
   await page.getByTestId("menu").click();
-  await page.getByTestId("map-orient").click();
-  await page.getByText("Stäng", { exact: true }).click();
+  await page.getByTestId("orient-north").click();
+  check("menyn visar vald kartriktning", (await page.getByTestId("orient-north").getAttribute("aria-checked")) === "true" && (await page.getByTestId("orient-compass").getAttribute("aria-checked")) === "false");
+  await page.getByText("Klar", { exact: true }).click();
   await page.waitForTimeout(1200);
   check("norr upp (i menyn) vrider tillbaka kartan", wrapDiff(await mapBearing(), 0) < 3, `bäring ${await mapBearing()}`);
   await page.getByTestId("menu").click();
-  await page.getByTestId("map-orient").click();
-  await page.getByText("Stäng", { exact: true }).click();
+  await page.getByTestId("orient-compass").click();
+  await page.getByText("Klar", { exact: true }).click();
   for (let i = 0; i < 30; i++) { await compass(0); await page.waitForTimeout(30); }
 
   // En slinga 130 × 130 m (medurs) från START.
@@ -132,8 +133,9 @@ try {
   const sounds = await page.evaluate(() => (window.__tiptoe.currentLog()?.data.entries ?? []).filter((e) => e.k === "sound").map((e) => e.d.kind));
   check("ljudregin ger ljud (närhet, belöning)", sounds.length > 0 && sounds.includes("chime"), sounds.slice(0, 8).join(","));
   await page.getByTestId("menu").click();
-  check("ljud av/på finns i menyn", await page.getByTestId("sound").isVisible());
-  await page.getByText("Stäng", { exact: true }).click();
+  check("ljud av/på finns i menyn som brytare", await page.getByTestId("sound").isVisible() && (await page.getByTestId("sound").getAttribute("role")) === "switch");
+  await page.screenshot({ path: `${OUT}/07-menu.png` });
+  await page.getByText("Klar", { exact: true }).click();
   const before = await view();
 
   // Omstart: ladda om sidan. Promenaden är pausad, reservat och poäng finns kvar.

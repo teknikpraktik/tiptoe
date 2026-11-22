@@ -191,13 +191,28 @@ export function Walk() {
       </div>
 
       {menu && (
-        <Modal title={t("walk.menu")} onClose={() => setMenu(false)} actions={<button className="btn" onClick={() => setMenu(false)}>{t("common.close")}</button>}>
-          <div className="menulist">
-            <button className="btn wide" onClick={() => audio.setEnabled(!soundOn)} aria-pressed={soundOn} data-testid="sound">{soundOn ? t("walk.soundOn") : t("walk.soundOff")}</button>
-            <button className="btn wide" onClick={() => { if (!trackUp) void mapCompass.requestPermission(); setTrackUp((x) => !x); }} data-testid="map-orient">{trackUp ? t("map.trackUp") : t("map.northUp")}</button>
-            <Link className="btn wide" href="/" data-testid="menu-home">{t("walk.toHome")}</Link>
-            <Link className="btn wide" href="/fieldbook">{t("home.fieldbook")}</Link>
-            <Link className="btn wide" href="/settings">{t("home.settings")}</Link>
+        <Modal title={t("walk.menu")} onClose={() => setMenu(false)} actions={<button className="btn primary" onClick={() => setMenu(false)}>{t("common.done")}</button>}>
+          <div className="sheet">
+            <div className="sheet-group">
+              <div className="sheet-label">{t("menu.mapDirection")}</div>
+              <div className="segmented" role="radiogroup" aria-label={t("menu.mapDirection")}>
+                <button role="radio" aria-checked={trackUp} className={trackUp ? "on" : ""} onClick={() => { void mapCompass.requestPermission(); setTrackUp(true); }} data-testid="orient-compass">{t("menu.compassUp")}</button>
+                <button role="radio" aria-checked={!trackUp} className={!trackUp ? "on" : ""} onClick={() => setTrackUp(false)} data-testid="orient-north">{t("menu.northUp")}</button>
+              </div>
+              <p className="sheet-hint">{trackUp ? t("menu.compassHint") : t("menu.northHint")}</p>
+            </div>
+            <div className="sheet-group">
+              <button className="sheet-row" role="switch" aria-checked={soundOn} onClick={() => audio.setEnabled(!soundOn)} data-testid="sound">
+                <span>{t("menu.sound")}<small>{t("menu.soundHint")}</small></span>
+                <span className={`switch ${soundOn ? "on" : ""}`} aria-hidden="true"><span /></span>
+              </button>
+            </div>
+            <div className="sheet-group">
+              <div className="sheet-label">{t("menu.goTo")}</div>
+              <Link className="sheet-row" href="/fieldbook"><span>{t("home.fieldbook")}</span><span className="chev" aria-hidden="true">›</span></Link>
+              <Link className="sheet-row" href="/settings"><span>{t("home.settings")}<small>{t("menu.settingsHint")}</small></span><span className="chev" aria-hidden="true">›</span></Link>
+              <Link className="sheet-row" href="/" data-testid="menu-home"><span>{t("menu.home")}<small>{t("menu.homeHint")}</small></span><span className="chev" aria-hidden="true">›</span></Link>
+            </div>
           </div>
         </Modal>
       )}
