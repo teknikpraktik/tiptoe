@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { levelForArea } from "@/engine/levels";
 import { SPECIES, type SpeciesId } from "@/engine/species";
 import type { PhotoResult } from "@/play/session";
@@ -10,6 +10,7 @@ import { animalManifest, type AnimalManifest } from "../_client/animalImages";
 import { CloseButton, Modal } from "../_client/Modal";
 import { useT } from "../_client/i18n";
 import type { OrientationStatus } from "../_client/orientationSource";
+import { mapCompass } from "../_client/mapCompass";
 import { useSession, useWalkView } from "../_client/SessionProvider";
 import { shareOrDownload } from "../_client/share";
 import { audio } from "../_client/audio";
@@ -28,7 +29,12 @@ export function Walk() {
   const ctx = useSession();
   const v = useWalkView();
   const [follow, setFollow] = useState(true);
-  const [trackUp, setTrackUp] = useState(false);
+  // Kompass upp är standard (kartan vrider sig när man vänder sig); utan kompass används färdriktningen från GPS.
+  const [trackUp, setTrackUp] = useState(true);
+  const gpsHeading = useRef<number | null>(null);
+  gpsHeading.current = v?.headingDeg ?? null;
+  const getHeading = useCallback(() => mapCompass.heading() ?? gpsHeading.current, []);
+  useEffect(() => { mapCompass.start(); }, []);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [camera, setCamera] = useState<{ id: string; orientation: OrientationStatus } | null>(null);
   const [target, setTarget] = useState<CameraTarget | null>(null);
@@ -108,7 +114,7 @@ export function Walk() {
 
   return (
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
       <div className="statusbar" data-testid="status">
         <CloseButton href="/" />
         <span className={`gps q-${v.quality}`}>{t(`gps.quality.${v.quality}`)}{v.accuracyM != null && v.quality !== "unavailable" ? ` ${t("gps.accuracy", { m: Math.round(v.accuracyM) })}` : ""}</span>
@@ -132,10 +138,10 @@ export function Walk() {
       )}
 
       <div className="controls">
-        {v.stage === "idle" && <button className="btn primary" onClick={() => { audio.unlock(); void s.start(); }} data-testid="start">{t("walk.start")}</button>}
+        {v.stage === "idle" && <button className="btn primary" onClick={() => { audio.unlock(); void mapCompass.requestPermission(); void s.start(); }} data-testid="start">{t("walk.start")}</button>}
         {v.stage === "walking" && (
           <>
-            <button className="btn small" onClick={() => setTrackUp((x) => !x)}>{trackUp ? t("map.trackUp") : t("map.northUp")}</button>
+            <button className="btn small" onClick={() => { if (!trackUp) void mapCompass.requestPermission(); setTrackUp((x) => !x); }} data-testid="map-orient">{trackUp ? t("map.trackUp") : t("map.northUp")}</button>
             {!follow && <button className="btn small" onClick={() => setFollow(true)}>{t("map.follow")}</button>}
             {v.photoTarget && (
               <button className="btn primary camera" onClick={openCamera} disabled={!v.photoTarget.ready} data-testid="camera-btn">

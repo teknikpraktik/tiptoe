@@ -67,7 +67,7 @@ export interface GameMapProps {
 const PLAYER_GLIDE_S = 0.45;
 const PLAYER_SNAP_M = 120;
 /** Kartans rotation följer riktningen med denna tidskonstant (s). */
-const BEARING_TAU_S = 0.35;
+const BEARING_TAU_S = 0.18;
 
 export default function GameMap(props: GameMapProps) {
   const el = useRef<HTMLDivElement>(null);
@@ -115,7 +115,9 @@ export default function GameMap(props: GameMapProps) {
       map.addSource("trails", { type: "geojson", data: fc() });
       map.addLayer({ id: "trails", type: "circle", source: "trails", paint: { "circle-radius": 2.6, "circle-color": "#7a4a1e", "circle-opacity": ["get", "o"], "circle-stroke-color": "#fbf9f3", "circle-stroke-width": 0.8 } });
       map.addSource("track", { type: "geojson", data: fc() });
-      map.addLayer({ id: "track", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#e8701a", "line-width": 3.5, "line-opacity": 0.9 } });
+      // Spåret där man gått: ljus kant under och en tydlig orange linje, som på en friluftsapp.
+      map.addLayer({ id: "walked-case", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 18, 9], "line-opacity": 0.9 } });
+      map.addLayer({ id: "walked", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#e8611a", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2.2, 18, 5.5] } });
       setLoaded(true);
     });
     // Svart karta: iOS kan tappa ritytan efter bakgrund. Rita om vid återkomst och vid storleksändring, och läs in stilen igen om den inte
@@ -138,7 +140,12 @@ export default function GameMap(props: GameMapProps) {
   const src = (id: string, data: GeoJSON.FeatureCollection) => (mapRef.current?.getSource(id) as GeoJSONSource | undefined)?.setData(data);
   const { player, accuracyM, follow, track, reserves, closure } = props;
 
-  useEffect(() => { if (loaded) src("track", fc(track && track.length > 1 ? [line(track)] : [])); }, [loaded, track]);
+  // Spåret går ända fram till spelaren (den sparade spårpunkten kan ligga upp till några meter bakom).
+  useEffect(() => {
+    if (!loaded) return;
+    const pts = track && track.length ? (player ? [...track, player] : track) : [];
+    src("track", fc(pts.length > 1 ? [line(pts)] : []));
+  }, [loaded, track, player]);
   const polys = (rs: [number, number][][][], levels?: number[]): GeoJSON.Feature[] => rs.map((rings, i) => ({ type: "Feature", properties: { level: levels?.[i] ?? 0 }, geometry: { type: "Polygon", coordinates: rings.map((r) => [...r, r[0]]) } }));
   useEffect(() => { if (loaded) src("reserves", fc(polys(reserves ?? [], props.reserveLevels))); }, [loaded, reserves, props.reserveLevels]);
   const home = props.homeArea;

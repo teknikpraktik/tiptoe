@@ -9,6 +9,7 @@ import { dayPhase } from "@/engine/sun";
 import { Repo } from "@/storage/repo";
 import { exportReminder } from "@/storage/reminder";
 import { audio } from "./audio";
+import { mapCompass } from "./mapCompass";
 import { useLang, useT } from "./i18n";
 import { installPrompt, isIos, isStandalone } from "./install";
 import { Modal } from "./Modal";
@@ -59,7 +60,9 @@ export function Home() {
   const go = async () => {
     setWarn(false);
     audio.unlock();
-    // Promenaden startas i klicket (iOS: rörelsesensorn kräver en användargest), sedan kartan.
+    // Kompassen (kartans rotation) och rörelsesensorn kräver en användargest på iOS: båda frågas här i klicket.
+    void mapCompass.requestPermission();
+    // Promenaden startas i klicket, sedan kartan.
     if (ctx && v?.stage === "idle") await ctx.session.start();
     router.push("/walk");
   };

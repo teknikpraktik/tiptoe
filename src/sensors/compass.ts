@@ -54,3 +54,28 @@ export function headingFromOrientation(e: OrientationLike, screenAngleDeg = 0): 
   if (Math.abs(vx) < 1e-6 && Math.abs(vy) < 1e-6) return { headingDeg: null, accuracyDeg: null }; // telefonen ligger exakt plant: ingen riktning
   return { headingDeg: wrap360((Math.atan2(vx, vy) * 180) / Math.PI + screenAngleDeg), accuracyDeg: null };
 }
+
+/**
+ * Kartans kurs: åt vilket håll telefonens överkant pekar, oavsett om den hålls plant (som en karta) eller upprätt (som en kamera).
+ * Överkantens riktning i horisontalplanet, kompletterad med baksidans i den mån överkanten pekar uppåt: plant ger överkanten (sidolutning
+ * påverkar inte), upprätt ger baksidan, och däremellan pekar båda åt samma håll, så kursen hoppar inte när telefonen lutas. iOS: `webkitCompassHeading` (gäller redan överkanten). Null utan pålitlig kompass.
+ */
+export function mapHeadingFromOrientation(e: OrientationLike, screenAngleDeg = 0): number | null {
+  if (e.webkitCompassHeading != null && Number.isFinite(e.webkitCompassHeading)) {
+    const acc = e.webkitCompassAccuracy;
+    if (acc != null && (acc < 0 || acc > COMPASS_MAX_ERROR_DEG)) return null;
+    return wrap360(e.webkitCompassHeading + screenAngleDeg);
+  }
+  if (!e.absolute || e.alpha == null || e.beta == null || e.gamma == null) return null;
+  // R = Rz(alpha) · Rx(beta) · Ry(gamma) (W3C), jordens x = öster, y = norr. Överkant = (0, 1, 0), baksida = (0, 0, −1).
+  const a = rad(e.alpha), b = rad(e.beta), g = rad(e.gamma);
+  const cA = Math.cos(a), sA = Math.sin(a), cB = Math.cos(b), sB = Math.sin(b), cG = Math.cos(g), sG = Math.sin(g);
+  // Rx·Ry tillämpat på vektorerna, sedan Rz.
+  const top = [0, cB, sB];
+  const back = [-sG, sB * cG, -cB * cG];
+  const wBack = 1 - Math.hypot(top[0], top[1]);
+  const hx0 = top[0] + back[0] * wBack, hy0 = top[1] + back[1] * wBack;
+  const ex = cA * hx0 - sA * hy0, ny = sA * hx0 + cA * hy0;
+  if (Math.hypot(ex, ny) < 0.2) return null;
+  return wrap360((Math.atan2(ex, ny) * 180) / Math.PI + screenAngleDeg);
+}

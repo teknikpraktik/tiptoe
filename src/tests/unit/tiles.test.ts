@@ -27,3 +27,14 @@ describe("tile-täckning runt spelaren", () => {
     expect(n).toBeLessThanOrEqual(4);
   });
 });
+
+describe("spelets kartlager", () => {
+  it("krockar inte med bakgrundsstilens lager-id (då läggs lagret aldrig till)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const gm = readFileSync("src/app/_client/GameMap.tsx", "utf8");
+    const own = [...gm.matchAll(/addLayer\(\{ id: "([a-z-]+)"/g)].map((m) => m[1]);
+    expect(own.length).toBeGreaterThan(5);
+    const base = new Set(MAP_STYLE.layers.map((l) => l.id));
+    expect(own.filter((id) => base.has(id))).toEqual([]);
+  });
+});
