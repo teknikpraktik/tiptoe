@@ -11,7 +11,7 @@ import type { StyleSpecification } from "maplibre-gl";
  * - Naturtyper som tydliga ytor (skog, öppen mark, åker, myr med streck, berg, sand), naturreservat med grön kant, vatten och vattendrag
  *   i blått, stigar rödbruna och streckade, traktorvägar bruna, vägar med kant. Etiketter för orter, sjöar, vattendrag, toppar och reservat.
  */
-export const MAP_ATTRIBUTION = { text: "© OpenStreetMap · OpenFreeMap © OpenMapTiles · Höjd: EU-DEM (Copernicus)", href: "https://www.openstreetmap.org/copyright" };
+export const MAP_ATTRIBUTION = { text: "© OpenStreetMap · OpenFreeMap · © OpenMapTiles · Höjd: EU-DEM (Copernicus)", href: "https://www.openstreetmap.org/copyright" };
 
 /** Tiles och typsnitt kommer från samma värd. */
 export const OMT_TILEJSON = "https://tiles.openfreemap.org/planet";

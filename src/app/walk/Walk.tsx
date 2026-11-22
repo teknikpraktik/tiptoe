@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { levelForArea } from "@/engine/levels";
@@ -41,6 +42,8 @@ export function Walk() {
   const getHeading = useCallback(() => mapCompass.heading() ?? gpsHeading.current, []);
   useEffect(() => { mapCompass.start(); }, []);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const needle = useRef<HTMLSpanElement>(null);
   const [camera, setCamera] = useState<{ id: string; orientation: OrientationStatus } | null>(null);
   const [target, setTarget] = useState<CameraTarget | null>(null);
   const [result, setResult] = useState<{ r: PhotoResult | null; url: string; blob: Blob; missed: boolean } | null>(null);
@@ -136,13 +139,14 @@ export function Walk() {
 
   return (
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
       <div className="statusbar" data-testid="status">
         <CloseButton href="/" />
-        <span className={`gps q-${v.quality}`}>{t(`gps.quality.${v.quality}`)}{v.accuracyM != null && v.quality !== "unavailable" ? ` ${t("gps.accuracy", { m: Math.round(v.accuracyM) })}` : ""}</span>
-        {v.stage === "walking" && <span className={`chip tempo t-${v.tempo}`} data-testid="tempo">{t(`tempo.${v.tempo}`)}</span>}
-        <button className="chip sound" onClick={() => audio.setEnabled(!soundOn)} aria-pressed={soundOn} data-testid="sound">{soundOn ? t("walk.soundOn") : t("walk.soundOff")}</button>
-        <span className="chip" data-testid="score">{t("walk.points", { n: v.score.total })} · {t("walk.area", { ha: fmtHa(v.totalAreaM2) })}</span>
+        {/* GPS-status visas bara när den är för dålig för att spela. */}
+        {v.stage === "walking" && (v.quality === "poor" || v.quality === "unavailable") && <span className={`gps q-${v.quality}`} data-testid="gps-warn">{t(`gps.quality.${v.quality}`)}</span>}
+        <span className="spacer" />
+        {v.totalAreaM2 > 0 && <span className="chip" data-testid="area">{t("walk.area", { ha: fmtHa(v.totalAreaM2) })}</span>}
+        <button className="iconbtn" onClick={() => setMenu(true)} aria-label={t("walk.menu")} data-testid="menu"><span className="burger" /></button>
       </div>
       {v.gpsError && <div className="toast" role="alert">{t(`gps.error.${v.gpsError}`)}</div>}
       {!v.gpsError && v.stage === "walking" && !v.pos && <div className="toast">{t("map.locating")}</div>}
@@ -167,12 +171,15 @@ export function Walk() {
         </div>
       )}
 
+      {v.stage === "walking" && (
+        <button className={`compassbtn ${follow ? "on" : ""}`} onClick={() => { if (trackUp) void mapCompass.requestPermission(); setFollow(true); }} aria-pressed={follow} aria-label={t("map.follow")} data-testid="follow">
+          <span ref={needle} className="needle"><span className="n" /><span className="s" /></span>
+        </button>
+      )}
       <div className="controls">
         {v.stage === "idle" && <button className="btn primary" onClick={() => { audio.unlock(); void mapCompass.requestPermission(); void s.start(); }} data-testid="start">{t("walk.start")}</button>}
         {v.stage === "walking" && (
           <>
-            <button className="btn small" onClick={() => { if (!trackUp) void mapCompass.requestPermission(); setTrackUp((x) => !x); }} data-testid="map-orient">{trackUp ? t("map.trackUp") : t("map.northUp")}</button>
-            {!follow && <button className="btn small" onClick={() => setFollow(true)}>{t("map.follow")}</button>}
             {v.photoTarget && (
               <button className="btn primary camera" onClick={openCamera} disabled={!v.photoTarget.ready} data-testid="camera-btn">
                 {v.photoTarget.ready ? `${t("walk.camera")} · ${near ? t(`species.${near.species}`) : ""}` : v.photoTarget.why === "move" ? t("walk.standStill") : t("walk.gpsTooWeak")}
@@ -183,6 +190,16 @@ export function Walk() {
         )}
       </div>
 
+      {menu && (
+        <Modal title={t("walk.menu")} onClose={() => setMenu(false)} actions={<button className="btn" onClick={() => setMenu(false)}>{t("common.close")}</button>}>
+          <div className="menulist">
+            <button className="btn wide" onClick={() => audio.setEnabled(!soundOn)} aria-pressed={soundOn} data-testid="sound">{soundOn ? t("walk.soundOn") : t("walk.soundOff")}</button>
+            <button className="btn wide" onClick={() => { if (!trackUp) void mapCompass.requestPermission(); setTrackUp((x) => !x); }} data-testid="map-orient">{trackUp ? t("map.trackUp") : t("map.northUp")}</button>
+            <Link className="btn wide" href="/fieldbook">{t("home.fieldbook")}</Link>
+            <Link className="btn wide" href="/settings">{t("home.settings")}</Link>
+          </div>
+        </Modal>
+      )}
       {v.stage === "paused" && (
         <Modal title={t("walk.pausedTitle")} actions={<>
           <button className="btn primary" onClick={() => { audio.unlock(); void s.start(); }} data-testid="resume">{t("walk.resume")}</button>

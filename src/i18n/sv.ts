@@ -85,6 +85,7 @@ export const sv = {
   "walk.camera": "Kamera",
   "walk.standStill": "Stå still",
   "walk.gpsTooWeak": "För svag GPS för foto",
+  "walk.menu": "Meny",
   "walk.points": "{n} p",
   "walk.area": "{ha} ha",
   "walk.reserveGrew": "+{ha} ha – ditt reservat växer",
