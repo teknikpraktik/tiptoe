@@ -20,9 +20,12 @@ try {
   await page.waitForSelector('[data-testid="player"]', { timeout: 5000 });
   check("spelarens markör visas", true);
   const status = await page.getByTestId("status").innerText();
-  check("GPS-status visas", /GPS bra/.test(status), status);
+  check("topraden är ren: ingen GPS-, tempo- eller ljudruta när GPS:en är bra", !/GPS|Stilla|Ljud/.test(status), status);
   const attrib = await page.locator(".attrib").innerText();
   check("attribution visas alltid", attrib.includes("OpenStreetMap") && attrib.includes("OpenFreeMap"));
+  const [ab, mb] = await Promise.all([page.locator(".attrib").boundingBox(), page.getByTestId("map").boundingBox()]);
+  check("attributionen ligger under kartan, inte över den", !!ab && !!mb && ab.y >= mb.y + mb.height - 1, JSON.stringify({ ab, mb }));
+  check("kompassknappen (följ mig) finns och är på", (await page.getByTestId("follow").getAttribute("aria-pressed")) === "true");
   await page.screenshot({ path: `${OUT}/02-walk.png` });
 } catch (e) {
   check("oväntat fel", false, String(e));

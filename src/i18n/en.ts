@@ -84,6 +84,7 @@ export const en: Record<MessageKey, string> = {
   "walk.camera": "Camera",
   "walk.standStill": "Stand still",
   "walk.gpsTooWeak": "GPS too weak for a photo",
+  "walk.menu": "Menu",
   "walk.points": "{n} pts",
   "walk.area": "{ha} ha",
   "walk.reserveGrew": "+{ha} ha – your reserve grows",

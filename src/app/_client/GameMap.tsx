@@ -61,6 +61,8 @@ export interface GameMapProps {
   animals?: MapAnimal[];
   onAnimalTap?: (id: string) => void;
   zoom?: number;
+  /** Element som vrids så att det pekar mot norr på kartan (kompassknappens nål). */
+  needle?: { current: HTMLElement | null };
   scale?: boolean;
   onError?: (what: string) => void;
 }
@@ -242,7 +244,8 @@ export default function GameMap(props: GameMapProps) {
   const playerMarker = useRef<Marker | null>(null);
   const followProp = useRef(follow);
   useEffect(() => {
-    if (follow && !followProp.current) manual.current = false;
+    // Följ slås på igen: tillbaka till promenadens zoomnivå (autozoom).
+    if (follow && !followProp.current) { manual.current = false; const m = mapRef.current; if (m) m.easeTo({ zoom: props.zoom ?? 16, duration: 400 }); }
     followProp.current = follow;
   }, [follow]);
   useEffect(() => {
@@ -316,6 +319,8 @@ export default function GameMap(props: GameMapProps) {
         if (h != null) (pe.querySelector(".arrow") as HTMLElement).style.transform = `rotate(${wrap180(h - bearing.current).toFixed(1)}deg)`;
       }
       if (el.current) el.current.dataset.bearing = String(Math.round(bearing.current));
+      const nd = P.needle?.current;
+      if (nd) nd.style.transform = `rotate(${(-map.getBearing()).toFixed(1)}deg)`;
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);

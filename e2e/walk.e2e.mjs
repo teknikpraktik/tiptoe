@@ -43,10 +43,17 @@ try {
   const wrapDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
   for (let i = 0; i < 30; i++) { await compass(90); await page.waitForTimeout(50); }
   check("kartan vrids efter kompassen (kompass upp)", wrapDiff(await mapBearing(), 270) < 5, `bäring ${await mapBearing()}`);
+  const needleDeg = await page.evaluate(() => { const m = /rotate\((-?[\d.]+)deg\)/.exec(document.querySelector(".compassbtn .needle")?.getAttribute("style") ?? ""); return m ? Number(m[1]) : NaN; });
+  check("kompassknappens nål pekar mot norr på kartan", wrapDiff(needleDeg, 90) < 5, `${needleDeg}°`);
+  // Norr upp finns i menyn (tillsammans med ljudet).
+  await page.getByTestId("menu").click();
   await page.getByTestId("map-orient").click();
+  await page.getByText("Stäng", { exact: true }).click();
   await page.waitForTimeout(1200);
-  check("norr upp vrider tillbaka kartan", wrapDiff(await mapBearing(), 0) < 3, `bäring ${await mapBearing()}`);
+  check("norr upp (i menyn) vrider tillbaka kartan", wrapDiff(await mapBearing(), 0) < 3, `bäring ${await mapBearing()}`);
+  await page.getByTestId("menu").click();
   await page.getByTestId("map-orient").click();
+  await page.getByText("Stäng", { exact: true }).click();
   for (let i = 0; i < 30; i++) { await compass(0); await page.waitForTimeout(30); }
 
   // En slinga 130 × 130 m (medurs) från START.
@@ -97,7 +104,7 @@ try {
     await page.locator(`[data-testid="animal"][data-id="${target.id}"]`).click({ force: true });
     const card = await page.getByTestId("animal-card").innerText({ timeout: 3000 }).catch(() => "");
     check("tryck på djuret visar ett kort (okänt djur, avstånd)", /Okänt/.test(card) && /m bort/.test(card), card.replace(/\n/g, " · "));
-    check("tryck på djuret stänger inte av följ mig", (await page.getByText("Följ mig").count()) === 0);
+    check("tryck på djuret stänger inte av följ mig", (await page.getByTestId("follow").getAttribute("aria-pressed")) === "true");
     await page.getByTestId("animal-card").click().catch(() => undefined);
   }
   if (target) {
@@ -124,7 +131,9 @@ try {
   }
   const sounds = await page.evaluate(() => (window.__tiptoe.currentLog()?.data.entries ?? []).filter((e) => e.k === "sound").map((e) => e.d.kind));
   check("ljudregin ger ljud (närhet, belöning)", sounds.length > 0 && sounds.includes("chime"), sounds.slice(0, 8).join(","));
-  check("ljud av/på finns i statusraden", await page.getByTestId("sound").isVisible());
+  await page.getByTestId("menu").click();
+  check("ljud av/på finns i menyn", await page.getByTestId("sound").isVisible());
+  await page.getByText("Stäng", { exact: true }).click();
   const before = await view();
 
   // Omstart: ladda om sidan. Promenaden är pausad, reservat och poäng finns kvar.

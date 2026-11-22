@@ -43,18 +43,21 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 
 /* Karta */
 .mapshell { position: fixed; inset: 0; overflow: hidden; }
-.mapshell .map-canvas { position: absolute; inset: 0; } /* specificitet över maplibregl-map (position: relative) */
-.attrib { position: absolute; right: 6px; bottom: calc(4px + var(--safe-bottom)); font-size: 10px; color: #3c3d35; text-decoration: none; background: #fbf9f3cc; padding: 1px 6px; border-radius: 6px; z-index: 3; }
+.mapshell { --attrib-h: 18px; }
+.mapshell .map-canvas { position: absolute; inset: 0 0 calc(var(--attrib-h) + var(--safe-bottom)) 0; } /* specificitet över maplibregl-map (position: relative) */
+/* Attributionen ligger i en egen rad längst ner, under kartan, så att den aldrig skymmer något. */
+.attrib { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--attrib-h) + var(--safe-bottom)); padding: 2px 8px var(--safe-bottom); box-sizing: border-box; font-size: 10px; line-height: 14px; color: #5b5242; text-decoration: none; background: #efe6d2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; z-index: 3; }
 .statusbar { position: absolute; top: calc(10px + var(--safe-top)); left: 10px; right: 10px; display: flex; align-items: center; gap: 10px; z-index: 4; }
 .gps { padding: 6px 10px; border-radius: 999px; font-size: 13px; background: #1f231ccc; }
 .gps.q-ok { color: var(--good); } .gps.q-fair { color: var(--ink); } .gps.q-weak { color: var(--warn); } .gps.q-poor, .gps.q-unavailable { color: var(--bad); }
-.controls { position: absolute; left: 10px; right: 10px; bottom: calc(28px + var(--safe-bottom)); display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; z-index: 4; }
+.controls { position: absolute; left: 10px; right: 10px; bottom: calc(14px + var(--attrib-h) + var(--safe-bottom)); display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; z-index: 4; }
 .toast { position: absolute; left: 16px; right: 16px; top: calc(64px + var(--safe-top)); padding: 12px 14px; border-radius: var(--radius); background: #1f231ce6; text-align: center; z-index: 5; }
 .pmark { width: 40px; height: 40px; position: relative; }
 .pmark .arrow, .pmark .dot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .pmark .arrow { display: none; }
 .pmark.has-heading .arrow { display: flex; }
 .pmark.has-heading .dot { display: none; }
+.mapshell .maplibregl-ctrl-bottom-left { bottom: calc(var(--attrib-h) + var(--safe-bottom)); }
 .maplibregl-ctrl-scale { background: #fbf9f3cc !important; color: #3c3d35 !important; border-color: #3c3d35 !important; }
 
 /* Dialog (Modal.tsx) */
@@ -168,3 +171,18 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .toast.hint { top: auto; bottom: calc(150px + var(--safe-bottom)); background: #2b3a4ae8; color: var(--ink); font: inherit; border: 0; }
 .animalcard { position: absolute; left: 16px; right: 16px; bottom: calc(96px + var(--safe-bottom)); z-index: 6; display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border: 0; border-radius: var(--radius); background: #1f231cee; color: var(--ink); font: inherit; text-align: left; }
 .animalcard b { font-size: 17px; }
+
+/* Promenadens topprad: stäng, (GPS-varning), areal och meny. */
+.statusbar .spacer { flex: 1; }
+.iconbtn { width: 44px; height: 44px; border-radius: 12px; border: 0; background: #1f231ccc; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.burger, .burger::before, .burger::after { display: block; width: 20px; height: 2px; border-radius: 2px; background: var(--ink); position: relative; content: ""; }
+.burger::before { position: absolute; top: -6px; } .burger::after { position: absolute; top: 6px; }
+.menulist { display: flex; flex-direction: column; gap: 10px; }
+/* Kompassknappen: följ mig, kompass upp och autozoom. Nålen pekar mot norr på kartan. Fylld när kartan följer. */
+.compassbtn { position: absolute; right: 12px; bottom: calc(80px + var(--attrib-h) + var(--safe-bottom)); width: 48px; height: 48px; border-radius: 12px; border: 2px solid #1f231c; background: #fbf9f3e6; display: flex; align-items: center; justify-content: center; z-index: 4; cursor: pointer; box-shadow: 0 2px 6px #0003; }
+.compassbtn.on { background: #1f231ce6; border-color: #1f231c; }
+.compassbtn .needle { position: relative; width: 10px; height: 30px; transition: transform .1s linear; }
+.compassbtn .needle .n, .compassbtn .needle .s { position: absolute; left: 0; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; }
+.compassbtn .needle .n { top: 0; border-bottom: 15px solid #d9452b; }
+.compassbtn .needle .s { bottom: 0; border-top: 15px solid #9a9488; }
+.compassbtn.on .needle .s { border-top-color: #e8e2d2; }
