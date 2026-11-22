@@ -64,7 +64,9 @@ export function Home() {
   const start = () => (!standalone && !going ? setWarn(true) : void go());
 
   return (
-    <main className="home" style={bg ? { backgroundImage: `linear-gradient(rgba(20,24,18,.45), rgba(20,24,18,.12) 30%, rgba(20,24,18,.1) 48%, rgba(20,24,18,.82) 72%), url(${bg})` } : undefined}>
+    <main className="home">
+      {/* Bakgrundsbilden täcker hela skärmen, även under statusfältet och hemindikatorn (eget fast lager). Ingen mörk toning upptill. */}
+      <div className="homebg" aria-hidden="true" style={bg ? { backgroundImage: `linear-gradient(rgba(20,24,18,0) 45%, rgba(20,24,18,.82) 75%, rgba(20,24,18,.9)), url(${bg})` } : undefined} />
       <header className="homehead">
         <h1 className="title">{t("app.name")}</h1>
         <p className="sub">{t("app.subtitle")}</p>

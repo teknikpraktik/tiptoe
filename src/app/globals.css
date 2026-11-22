@@ -30,7 +30,10 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .card { background: var(--card); border-radius: var(--radius); padding: 14px 16px; }
 
 /* Start */
-.home { min-height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: calc(48px + var(--safe-top)) 24px calc(32px + var(--safe-bottom));
+.home { position: relative; isolation: isolate; min-height: 100%; min-height: 100lvh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; padding: calc(48px + var(--safe-top)) 24px calc(32px + var(--safe-bottom));
+  background: transparent; }
+/* Fast lager bakom startsidan: hela skärmen (stora viewporten), så att inget tomt band syns längst ner i en installerad app. */
+.homebg { position: fixed; z-index: -1; left: 0; right: 0; top: 0; height: 100vh; height: 100lvh; bottom: auto; min-height: 100%;
   background: radial-gradient(120% 70% at 50% 0%, #4a4a33 0%, #2b2f27 45%, #1a1d17 100%); background-size: cover; background-position: center; }
 .homehead .title, .homehead .sub, .homehead .tagline { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 0, 0, 0.65), 0 0 4px rgba(0, 0, 0, 0.5); }
 .homehead .sub { color: #ffdc93; }

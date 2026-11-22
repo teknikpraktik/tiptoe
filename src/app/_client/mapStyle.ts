@@ -101,9 +101,8 @@ export const MAP_STYLE: StyleSpecification = {
     { id: "wetland-marsh", type: "fill", source: "omt", "source-layer": "landcover", minzoom: 12, filter: ["==", "class", "wetland"], paint: { "fill-pattern": MARSH_PATTERN, "fill-opacity": 0.7 } },
     // --- Terräng ---
     { id: "hillshade", type: "hillshade", source: "dem", paint: { "hillshade-exaggeration": lin(10, 0.4, 13, 0.2, 16, 0.08), "hillshade-shadow-color": "rgba(74, 60, 40, 0.8)", "hillshade-highlight-color": "rgba(255, 250, 235, 0.35)", "hillshade-accent-color": "#6b5f4a", "hillshade-illumination-direction": 315 } },
-    // --- Naturreservat och nationalparker ---
+    // --- Naturreservat och nationalparker: bara en svag ton och namnet (ingen gränslinje; den förväxlades med spelets egna reservat). ---
     { id: "reserve-fill", type: "fill", source: "omt", "source-layer": "park", paint: { "fill-color": PALETTE.reserve, "fill-opacity": 0.06 } },
-    { id: "reserve-edge", type: "line", source: "omt", "source-layer": "park", paint: { "line-color": PALETTE.reserve, "line-opacity": 0.55, "line-width": w(10, 1, 16, 3), "line-blur": 0.8, "line-dasharray": [3, 1.5] } },
     // --- Vatten: blå vask med mörkare kant och ljusa moln ---
     { id: "water-base", type: "fill", source: "omt", "source-layer": "water", filter: ["!=", "class", "swimming_pool"], paint: { "fill-color": PALETTE.water } },
     { id: "water", type: "fill", source: "omt", "source-layer": "water", filter: ["!=", "class", "swimming_pool"], paint: { "fill-pattern": "water" } },
