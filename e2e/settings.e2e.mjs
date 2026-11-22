@@ -1,4 +1,4 @@
-// Profiler, språk och hemområde (fas 2.7) i headless Chromium.
+// Profiler och språk (fas 2.7) i headless Chromium.
 import { setup } from "./lib.mjs";
 
 const OUT = process.env.E2E_OUT ?? "e2e/out/settings";
@@ -15,8 +15,7 @@ try {
   await page.getByTestId("create-profile").click();
   await page.waitForFunction(() => /Alva.*Aktiv/s.test(document.querySelector('[data-testid="settings-profiles"]')?.textContent ?? ""), null, { timeout: 5000 });
   check("ny barnprofil skapas och blir aktiv", true);
-  const home = await page.getByTestId("settings-home").innerText();
-  check("barnprofilen får hemområde 1 km", await page.locator('[data-testid="home-1000"].on').count() === 1, home.split("\n")[0]);
+  check("hemområdet är borttaget", (await page.getByTestId("settings-home").count()) === 0);
   await page.getByTestId("lang-en").click();
   await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Settings", null, { timeout: 5000 });
   check("språket byts till engelska för profilen", true);
