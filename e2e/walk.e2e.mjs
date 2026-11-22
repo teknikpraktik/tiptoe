@@ -42,6 +42,12 @@ try {
   const mapBearing = () => page.evaluate(() => Number(document.querySelector('[data-testid="map"]')?.dataset.bearing ?? "NaN"));
   const wrapDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
   for (let i = 0; i < 30; i++) { await compass(90); await page.waitForTimeout(50); }
+  {
+    // Skalstocken, Avsluta och kompassknappen ligger på samma mittlinje (±3 px).
+    const mid = async (sel) => { const b = await page.locator(sel).first().boundingBox(); return b ? b.y + b.height / 2 : NaN; };
+    const [a, b2, c] = [await mid(".maplibregl-ctrl-scale"), await mid('[data-testid="end"]'), await mid('[data-testid="follow"]')];
+    check("skalstock, Avsluta och kompassknapp på samma höjd", Math.abs(a - c) <= 3 && Math.abs(b2 - c) <= 3, `${a.toFixed(1)} / ${b2.toFixed(1)} / ${c.toFixed(1)}`);
+  }
   check("kartan vrids efter kompassen (kompass upp)", wrapDiff(await mapBearing(), 270) < 5, `bäring ${await mapBearing()}`);
   const needleDeg = await page.evaluate(() => { const m = /rotate\((-?[\d.]+)deg\)/.exec(document.querySelector(".compassbtn .needle")?.getAttribute("style") ?? ""); return m ? Number(m[1]) : NaN; });
   check("kompassknappens nål pekar mot norr på kartan", wrapDiff(needleDeg, 90) < 5, `${needleDeg}°`);
