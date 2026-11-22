@@ -21,7 +21,7 @@ export const sv = {
   "map.locating": "Söker position …",
   "map.attribution": "Kartdata",
   "map.northUp": "Norr upp",
-  "map.trackUp": "Färdriktning upp",
+  "map.trackUp": "Kompass upp",
   "map.follow": "Följ mig",
 
   "gps.quality.ok": "GPS bra",

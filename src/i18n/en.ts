@@ -20,7 +20,7 @@ export const en: Record<MessageKey, string> = {
   "map.locating": "Finding your position …",
   "map.attribution": "Map data",
   "map.northUp": "North up",
-  "map.trackUp": "Heading up",
+  "map.trackUp": "Compass up",
   "map.follow": "Follow me",
 
   "gps.quality.ok": "GPS good",

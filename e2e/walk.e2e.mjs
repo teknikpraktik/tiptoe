@@ -37,12 +37,29 @@ try {
   check("promenaden startar och kartan visas", (await view()).stage === "walking");
   await clock();
 
+  // Kompass upp: telefonen plant med överkanten mot väster (alpha 90) ⇒ kartan vrids till 270°. Knappen växlar till norr upp och tillbaka.
+  const compass = (alpha) => page.evaluate((a) => window.dispatchEvent(new DeviceOrientationEvent("deviceorientationabsolute", { alpha: a, beta: 10, gamma: 0, absolute: true })), alpha);
+  const mapBearing = () => page.evaluate(() => Number(document.querySelector('[data-testid="map"]')?.dataset.bearing ?? "NaN"));
+  const wrapDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
+  for (let i = 0; i < 30; i++) { await compass(90); await page.waitForTimeout(50); }
+  check("kartan vrids efter kompassen (kompass upp)", wrapDiff(await mapBearing(), 270) < 5, `bäring ${await mapBearing()}`);
+  await page.getByTestId("map-orient").click();
+  await page.waitForTimeout(1200);
+  check("norr upp vrider tillbaka kartan", wrapDiff(await mapBearing(), 0) < 3, `bäring ${await mapBearing()}`);
+  await page.getByTestId("map-orient").click();
+  for (let i = 0; i < 30; i++) { await compass(0); await page.waitForTimeout(30); }
+
   // En slinga 130 × 130 m (medurs) från START.
   let p = { latitude: START.latitude, longitude: START.longitude };
   await fix(p);
   for (const b of [0, 90, 180, 270]) p = await walkLine(p, b, 130);
   for (let i = 0; i < 12; i++) await fix(p);
   await page.waitForTimeout(500);
+  {
+    // Spåret där man gått ritas på kartan och slutar vid spelaren.
+    const tr = await page.evaluate(() => { const v = window.__tiptoe.getView(); return { n: v.track.length, pos: v.pos }; });
+    check("spåret bakom spelaren finns (minst 50 punkter)", tr.n >= 50, `${tr.n} punkter`);
+  }
   let v = await view();
   check("slingan blir ett reservat", v.reserves === 1, `${(v.area / 10_000).toFixed(2)} ha`);
   check("arealen stämmer (±15 %)", Math.abs(v.area / 16_900 - 1) < 0.15, `${Math.round(v.area)} m²`);
