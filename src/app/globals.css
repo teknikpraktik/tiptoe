@@ -32,7 +32,8 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 /* Start */
 .home { min-height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: calc(48px + var(--safe-top)) 24px calc(32px + var(--safe-bottom));
   background: radial-gradient(120% 70% at 50% 0%, #4a4a33 0%, #2b2f27 45%, #1a1d17 100%); background-size: cover; background-position: center; }
-.homehead .title, .homehead .sub, .homehead .tagline { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 14px rgba(0, 0, 0, 0.6); }
+.homehead .title, .homehead .sub, .homehead .tagline { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 0, 0, 0.65), 0 0 4px rgba(0, 0, 0, 0.5); }
+.homehead .sub { color: #ffdc93; }
 .homehead .tagline { color: #e8e2d2; }
 .fbhead { background-size: cover; background-position: center; }
 .homehead { text-align: center; margin-top: 12vh; }
@@ -187,3 +188,8 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 .compassbtn .needle .n { top: 0; border-bottom: 15px solid #d9452b; }
 .compassbtn .needle .s { bottom: 0; border-top: 15px solid #9a9488; }
 .compassbtn.on .needle .s { border-top-color: #e8e2d2; }
+
+/* Inställningar: profilväljare och formuläret för ny profil. */
+.profilepick { display: flex; flex-wrap: wrap; gap: 8px; }
+.subcard { padding: 12px; border-radius: 12px; background: #00000022; }
+.btn.danger { color: var(--bad); }
