@@ -81,7 +81,7 @@ export function Settings() {
           {v.profiles.length > 1 && (
             <button className="btn small ghost danger" onClick={() => { if (confirm(t("settings.deleteConfirm", { name: p.name }))) void s.deleteProfile(p.id); }} data-testid="delete-profile">{t("settings.deleteThis", { name: p.name })}</button>
           )}
-          <Link className="btn small ghost" href="/field">{t("settings.diagnostics")}</Link>
+          <Link className="btn small" href="/field" data-testid="field-test">{t("settings.diagnostics")}</Link>
         </section>
       </div>
     </main>

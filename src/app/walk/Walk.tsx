@@ -25,6 +25,10 @@ const sentenceName = (name: string, first: boolean) => (first ? name : name.char
 
 const fmtHa = (m2: number) => (m2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1, minimumFractionDigits: m2 < 100_000 ? 1 : 0 });
 
+function HomeIcon() {
+  return <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" /><path d="M10 19.5v-5h4v5" /></svg>;
+}
+
 /** Storleksklass för ett okänt djur (en ledtråd utan att avslöja arten). */
 const sizeOf = (sp: SpeciesId): "small" | "medium" | "large" => (SPECIES[sp].heightM < 0.45 ? "small" : SPECIES[sp].heightM < 1 ? "medium" : "large");
 /** Vad djuret gör, för kortet. */
@@ -142,6 +146,8 @@ export function Walk() {
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
       <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} />
       <div className="statusbar" data-testid="status">
+        {/* Till startsidan: promenaden fortsätter i bakgrunden (Avsluta avslutar den). */}
+        <Link className="iconbtn" href="/" aria-label={t("menu.home")} title={t("menu.homeHint")} data-testid="home"><HomeIcon /></Link>
         {/* GPS-status visas bara när den är för dålig för att spela. */}
         {v.stage === "walking" && (v.quality === "poor" || v.quality === "unavailable") && <span className={`gps q-${v.quality}`} data-testid="gps-warn">{t(`gps.quality.${v.quality}`)}</span>}
         <span className="spacer" />
@@ -211,7 +217,6 @@ export function Walk() {
               <div className="sheet-label">{t("menu.goTo")}</div>
               <Link className="sheet-row" href="/fieldbook"><span>{t("home.fieldbook")}</span><span className="chev" aria-hidden="true">›</span></Link>
               <Link className="sheet-row" href="/settings"><span>{t("home.settings")}<small>{t("menu.settingsHint")}</small></span><span className="chev" aria-hidden="true">›</span></Link>
-              <Link className="sheet-row" href="/" data-testid="menu-home"><span>{t("menu.home")}<small>{t("menu.homeHint")}</small></span><span className="chev" aria-hidden="true">›</span></Link>
             </div>
           </div>
         </Modal>

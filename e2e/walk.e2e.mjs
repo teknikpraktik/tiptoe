@@ -139,6 +139,7 @@ try {
   const sounds = await page.evaluate(() => (window.__tiptoe.currentLog()?.data.entries ?? []).filter((e) => e.k === "sound").map((e) => e.d.kind));
   check("ljudregin ger ljud (närhet, belöning)", sounds.length > 0 && sounds.includes("chime"), sounds.slice(0, 8).join(","));
   await page.getByTestId("menu").click();
+  check("startsidan ligger inte i menyn", (await page.getByTestId("menu-home").count()) === 0 && (await page.getByTestId("home").count()) === 1);
   check("ljud av/på finns i menyn som brytare", await page.getByTestId("sound").isVisible() && (await page.getByTestId("sound").getAttribute("role")) === "switch");
   await page.screenshot({ path: `${OUT}/07-menu.png` });
   await page.getByText("Klar", { exact: true }).click();
