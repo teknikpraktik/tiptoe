@@ -9,6 +9,7 @@ import { Modal, PageHeader } from "../_client/Modal";
 import { useT } from "../_client/i18n";
 import { useSession, useWalkView } from "../_client/SessionProvider";
 import { shareOrDownload } from "../_client/share";
+import { asciiFileName } from "@/config/brand";
 
 const stars = (n: number) => "★".repeat(n) + "☆".repeat(3 - n);
 
@@ -81,7 +82,7 @@ export function FieldBookPage() {
       {photo && (
         <Modal title={open ? t(`species.${open.species}`) : ""} onClose={() => setPhoto(null)} actions={<>
           <button className="btn primary" onClick={() => setPhoto(null)}>{t("common.back")}</button>
-          <button className="btn" disabled={!big} onClick={() => big && void shareOrDownload(big.blob, `tiptoe-${photo}.jpg`, t("camera.photoTitle"))}>{t("camera.share")}</button>
+          <button className="btn" disabled={!big} onClick={() => big && void shareOrDownload(big.blob, asciiFileName(`djurfoto-${photo}.jpg`), t("camera.photoTitle"))}>{t("camera.share")}</button>
         </>}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {big && <img src={big.url} alt="" className="photo" />}

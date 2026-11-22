@@ -1,10 +1,11 @@
+import { BRAND } from "@/config/brand";
 /**
  * Svenska ordlistan: standardspråk och källan till alla nycklar. En ny text läggs till här först; TypeScript kräver sedan att den
  * finns i `en.ts`. Platshållare skrivs `{namn}`.
  */
 export const sv = {
-  "app.name": "Tiptoe",
-  "app.subtitle": "Wild Encounters",
+  "app.name": BRAND.name,
+  "app.subtitle": BRAND.slogan.sv,
   "app.tagline": "Smyg dig nära innan det flyr.",
 
   "common.close": "Stäng",
@@ -12,7 +13,7 @@ export const sv = {
   "common.cancel": "Avbryt",
   "common.ok": "OK",
   "common.update": "Uppdatera",
-  "common.updateAvailable": "En ny version av Tiptoe finns.",
+  "common.updateAvailable": `En ny version av ${BRAND.prose.sv} finns.`,
 
   "home.startWalk": "Starta promenad",
   "home.fieldbook": "Fältdagbok",
@@ -58,7 +59,7 @@ export const sv = {
   "camera.saved": "Fotot är sparat i appen.",
   "camera.share": "Spara till Bilder / dela",
   "camera.again": "Ta ett till",
-  "camera.photoTitle": "Tiptoe-foto",
+  "camera.photoTitle": `Foto från ${BRAND.prose.sv}`,
 
   "spike.title": "Kameratest",
   "spike.intro": "Ett platshållarrådjur placeras framför dig. Vrid telefonen, ta foto och spara till Bilder. Kontrollera att djuret står kvar på marken när du vrider dig.",
@@ -124,9 +125,9 @@ export const sv = {
 
   "home.stats": "{points} poäng · {species} av {total} arter · {ha} ha reservat",
 
-  "install.title": "Installera Tiptoe först",
+  "install.title": `Installera ${BRAND.prose.sv} först`,
   "install.why": "Installera appen på hemskärmen innan första promenaden. Då får kameran, GPS:en och dina fynd en egen, säkrare plats i telefonen.",
-  "install.ios": "iPhone: tryck på Dela-knappen i Safari och välj Lägg till på hemskärmen. Öppna sedan Tiptoe från hemskärmen.",
+  "install.ios": `iPhone: tryck på Dela-knappen i Safari och välj Lägg till på hemskärmen. Öppna sedan ${BRAND.prose.sv} från hemskärmen.`,
   "install.android": "Android: tryck på Installera nedan, eller välj Installera app i Chromes meny.",
   "install.button": "Installera",
   "install.browserTitle": "Du spelar i webbläsaren",
@@ -172,7 +173,7 @@ export const sv = {
   "home.field": "Fälttest",
 
   "field.compassLine": "kompass {c} · gyro {g} · lutning {p}",
-  "field.logTitle": "Tiptoe-logg",
+  "field.logTitle": `Fältlogg från ${BRAND.prose.sv}`,
   "field.source.motion": "sensor",
   "field.source.gps": "GPS-fart",
 
@@ -296,10 +297,10 @@ export const sv = {
   "backup.replace": "Ersätt {name}",
   "backup.replaceConfirm": "Ersätta profilen {name}? Allt den innehåller nu försvinner och ersätts av filens innehåll.",
   "backup.imported": "Profilen {name} är importerad.",
-  "backup.error.not_zip": "Filen är ingen Tiptoe-export (inte en zip-fil).",
+  "backup.error.not_zip": `Filen är ingen export från ${BRAND.prose.sv} (inte en zip-fil).`,
   "backup.error.too_big": "Filen är för stor.",
-  "backup.error.wrong_format": "Filen är ingen Tiptoe-export.",
-  "backup.error.newer_schema": "Filen kommer från en nyare version av Tiptoe. Uppdatera appen först.",
+  "backup.error.wrong_format": `Filen är ingen export från ${BRAND.prose.sv}.`,
+  "backup.error.newer_schema": `Filen kommer från en nyare version av ${BRAND.prose.sv}. Uppdatera appen först.`,
   "backup.error.invalid_data": "Filen är skadad eller ändrad och kan inte läsas.",
   "backup.error.missing_photo": "Filen saknar foton och kan inte läsas.",
   "backup.reminder": "Du har inte exporterat dina fynd på ett tag. Gör en säkerhetskopia i inställningarna.",

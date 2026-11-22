@@ -1,12 +1,14 @@
 /* Origin: teknikpraktik/solosurvival@033a121 public/sw.js */
-/* Tiptoe service worker – enkel och försiktig.
+/* SPÅR service worker (cachenamnen behåller arbetsnamnet tiptoe) – enkel och försiktig.
  * - Cachar bara statiska filer (hashade /_next/static, ikoner, MapLibre-worker) så att appen startar snabbare.
  * - Sidor hämtas nätverk-först med reserv i cachen om nätet saknas en stund. Detta är INTE en offline-garanti.
  * - Kartrutor (OpenFreeMap, annan origin) rörs aldrig här. /version.json och /sw.js cachas aldrig.
  * - Ny version väntar tills spelaren väljer att uppdatera (SKIP_WAITING); aldrig mitt i en promenad.
  */
 const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
-const STATIC = "tiptoe-static-v1";
+// v2 (namnbytet till SPÅR): den gamla statiska cachen (manifest, ikoner) raderas vid aktivering så att inget gammalt namn ligger kvar.
+// Bara cacher för filer från servern raderas; spelarens data ligger i IndexedDB och rörs inte.
+const STATIC = "tiptoe-static-v2";
 const PAGES = "tiptoe-pages-" + VERSION;
 
 self.addEventListener("install", () => {

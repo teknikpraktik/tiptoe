@@ -8,6 +8,7 @@ import { Modal } from "../_client/Modal";
 import { useLang, useT } from "../_client/i18n";
 import { useSession, useWalkView } from "../_client/SessionProvider";
 import { shareOrDownload } from "../_client/share";
+import { BRAND, asciiFileName } from "@/config/brand";
 
 const mb = (b?: number) => `${((b ?? 0) / 1e6).toFixed(1)} MB`;
 
@@ -41,8 +42,8 @@ export function Backup() {
     setBusy(true);
     try {
       const { bytes } = await exportProfile(repo, pid, BUILD_ID);
-      const name = `tiptoe-${v.profile!.name.replace(/[^\p{L}\p{N}_-]+/gu, "_")}-${new Date().toISOString().slice(0, 10)}.zip`;
-      await shareOrDownload(new Blob([bytes as BlobPart], { type: "application/zip" }), name, "Tiptoe");
+      const name = asciiFileName(`export-${v.profile!.name}-${new Date().toISOString().slice(0, 10)}.zip`);
+      await shareOrDownload(new Blob([bytes as BlobPart], { type: "application/zip" }), name, BRAND.name);
       await repo.setLastExport(pid, Date.now());
       await refresh();
     } finally { setBusy(false); }

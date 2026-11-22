@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Tiptoe – Wild Encounters (GPS-baserat smyg- och fotospel)",
+  "description": "SPÅR – Wildlife Adventure (GPS-baserat smyg- och fotospel; arbetsnamn Tiptoe)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
