@@ -262,7 +262,6 @@ export const en: Record<MessageKey, string> = {
   "settings.kind.adult": "Adult",
   "settings.language": "Language",
   "settings.sound": "Sound",
-  "settings.active": "Active",
   "settings.deleteConfirm": "Delete the profile {name} with all walks, reserves and photos? This cannot be undone.",
   "settings.newProfile": "New profile",
   "settings.create": "Create",
