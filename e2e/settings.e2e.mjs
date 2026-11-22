@@ -15,6 +15,7 @@ try {
   await page.getByTestId("create-profile").click();
   await page.waitForFunction(() => /✓ Alva/.test(document.querySelector('[data-testid="settings-profiles"]')?.textContent ?? ""), null, { timeout: 5000 });
   check("ny barnprofil skapas och blir aktiv", true);
+  check("fälttestet finns under inställningar", await page.getByTestId("field-test").isVisible());
   check("hemområdet är borttaget", (await page.getByTestId("settings-home").count()) === 0);
   await page.getByTestId("lang-en").click();
   await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Settings", null, { timeout: 5000 });

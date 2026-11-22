@@ -274,7 +274,7 @@ export const en: Record<MessageKey, string> = {
   "fieldbook.points": "{n} pts",
 
   "settings.switchWhileWalking": "A walk is in progress. It will be paused and saved, and you can continue it when you switch back. Switch profile?",
-  "settings.advanced": "Other",
+  "settings.advanced": "Field test and more",
   "settings.deleteThis": "Delete profile {name}",
   "settings.title": "Settings",
   "settings.profile": "Profile",
@@ -288,7 +288,7 @@ export const en: Record<MessageKey, string> = {
   "settings.newProfile": "New profile",
   "settings.create": "Create",
   "settings.newName": "Name of the new profile",
-  "settings.diagnostics": "Field test and diagnostics",
+  "settings.diagnostics": "Field test",
   "home.profile": "Profile: {name}",
   "home.switchProfile": "Choose profile",
   "home.settings": "Settings",

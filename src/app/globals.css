@@ -185,7 +185,7 @@ html:has(.mapshell), html:has(.mapshell) body { background: #efe6d2; }
 
 /* Promenadens topprad: stäng, (GPS-varning), areal och meny. */
 .statusbar .spacer { flex: 1; }
-.iconbtn { width: 44px; height: 44px; border-radius: 12px; border: 0; background: #1f231ccc; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.iconbtn { color: var(--ink); text-decoration: none; width: 44px; height: 44px; border-radius: 12px; border: 0; background: #1f231ccc; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .burger, .burger::before, .burger::after { display: block; width: 20px; height: 2px; border-radius: 2px; background: var(--ink); position: relative; content: ""; }
 .burger::before { position: absolute; top: -6px; } .burger::after { position: absolute; top: 6px; }
 /* Kompassknappen: följ mig, kompass upp och autozoom. Nålen pekar mot norr på kartan. Fylld när kartan följer. */

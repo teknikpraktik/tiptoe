@@ -275,7 +275,7 @@ export const sv = {
   "fieldbook.points": "{n} p",
 
   "settings.switchWhileWalking": "En promenad pågår. Den pausas och sparas, och du kan fortsätta den när du byter tillbaka. Byta profil?",
-  "settings.advanced": "Övrigt",
+  "settings.advanced": "Fälttest och mer",
   "settings.deleteThis": "Radera profilen {name}",
   "settings.title": "Inställningar",
   "settings.profile": "Profil",
@@ -289,7 +289,7 @@ export const sv = {
   "settings.newProfile": "Ny profil",
   "settings.create": "Skapa",
   "settings.newName": "Namn på ny profil",
-  "settings.diagnostics": "Fälttest och diagnostik",
+  "settings.diagnostics": "Fälttest",
   "home.profile": "Profil: {name}",
   "home.switchProfile": "Välj profil",
   "home.settings": "Inställningar",
