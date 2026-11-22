@@ -6,7 +6,7 @@ import { tileRange } from "@/geo/blockers";
 
 describe("bakgrundskarta", () => {
   it("stilen hämtar bara från nyckelfria källor: OpenFreeMap (tiles och typsnitt) och Terrain Tiles på AWS; inga sprites", () => {
-    expect(Object.keys(MAP_STYLE.sources).sort()).toEqual(["dem", "omt"]);
+    expect(Object.keys(MAP_STYLE.sources).sort()).toEqual(["dem", "omt", "paper"]);
     const urls = [JSON.stringify(MAP_STYLE.sources), MAP_STYLE.glyphs ?? ""].join(" ").match(/https:\/\/[^/"]+/g) ?? [];
     expect(new Set(urls)).toEqual(new Set(["https://tiles.openfreemap.org", "https://s3.amazonaws.com"]));
     expect(MAP_STYLE.sprite).toBeUndefined();
@@ -36,5 +36,24 @@ describe("spelets kartlager", () => {
     expect(own.length).toBeGreaterThan(5);
     const base = new Set(MAP_STYLE.layers.map((l) => l.id));
     expect(own.filter((id) => base.has(id))).toEqual([]);
+  });
+});
+
+describe("målade texturer", () => {
+  it("alla mönster i stilen finns (ritas i koden) och är sömlösa", async () => {
+    const { MAP_TEXTURES } = await import("@/app/_client/mapTextures");
+    const used = new Set(MAP_STYLE.layers.flatMap((l) => { const p = (l as { paint?: Record<string, unknown> }).paint ?? {}; return [p["fill-pattern"], p["background-pattern"]].filter((x): x is string => typeof x === "string"); }));
+    for (const id of used) expect(id === "marsh" || id in MAP_TEXTURES, id).toBe(true);
+    for (const [id, make] of Object.entries(MAP_TEXTURES)) {
+      const t = make();
+      expect(t.data.length, id).toBe(t.width * t.height * 4);
+      // Sömlöst: första och sista kolumnen (och raden) skiljer sig lite, som två grannkolumner.
+      let edge = 0, inner = 0;
+      for (let y = 0; y < t.height; y++) for (let c = 0; c < 3; c++) {
+        edge += Math.abs(t.data[(y * t.width) * 4 + c] - t.data[(y * t.width + t.width - 1) * 4 + c]);
+        inner += Math.abs(t.data[(y * t.width + 10) * 4 + c] - t.data[(y * t.width + 11) * 4 + c]);
+      }
+      expect(edge, id).toBeLessThan(inner * 3 + t.height * 3);
+    }
   });
 });

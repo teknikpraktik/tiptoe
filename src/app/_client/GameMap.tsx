@@ -11,6 +11,7 @@ import { haversineM, type LatLon } from "@/geo/geometry";
 import { wrap180 } from "@/sensors/heading";
 import { MAP_ATTRIBUTION, MAP_STYLE, MARSH_PATTERN, PAW_IMAGE, marshPattern, pawImage } from "./mapStyle";
 import { bearingDeg } from "@/geo/geometry";
+import { MAP_TEXTURES } from "./mapTextures";
 
 const fc = (features: GeoJSON.Feature[] = []): GeoJSON.FeatureCollection => ({ type: "FeatureCollection", features });
 const line = (pts: LatLon[], props: Record<string, unknown> = {}): GeoJSON.Feature => ({ type: "Feature", properties: props, geometry: { type: "LineString", coordinates: pts.map((p) => [p.lon, p.lat]) } });
@@ -103,11 +104,16 @@ export default function GameMap(props: GameMapProps) {
       // Kartbilden är en bonus: tappas tiles fortsätter spelet. Logga bara de första felen.
       if (tileErrors++ < 3) propsRef.current.onError?.(String((e as unknown as { error?: { message?: string } }).error?.message ?? "map error"));
     });
-    // Myrens mönster ritas i koden (inga sprites).
-    map.on("styleimagemissing", (e) => {
-      if (e.id === MARSH_PATTERN && !map.hasImage(MARSH_PATTERN)) map.addImage(MARSH_PATTERN, marshPattern());
-      if (e.id === PAW_IMAGE && !map.hasImage(PAW_IMAGE)) map.addImage(PAW_IMAGE, pawImage(), { pixelRatio: 2 });
-    });
+    // Kartans mönster och tassar ritas i koden (inga sprites). Läggs till direkt när stilen finns, innan rutorna ritas (annars kan en ruta
+    // ritas utan mönster), och vid behov om stilen laddas om.
+    const addImage = (id: string) => {
+      if (map.hasImage(id)) return;
+      if (id === MARSH_PATTERN) map.addImage(id, marshPattern());
+      else if (id === PAW_IMAGE) map.addImage(id, pawImage(), { pixelRatio: 2 });
+      else if (MAP_TEXTURES[id]) map.addImage(id, MAP_TEXTURES[id](), { pixelRatio: 2 });
+    };
+    map.on("styledata", () => { for (const id of [MARSH_PATTERN, PAW_IMAGE, ...Object.keys(MAP_TEXTURES)]) addImage(id); });
+    map.on("styleimagemissing", (e) => addImage(e.id));
     map.on("load", () => {
       map.addSource("acc", { type: "geojson", data: fc() });
       map.addLayer({ id: "acc", type: "fill", source: "acc", paint: { "fill-color": "#2f7fd8", "fill-opacity": 0.1 } });
