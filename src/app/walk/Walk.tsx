@@ -8,7 +8,7 @@ import { SPECIES, type SpeciesId } from "@/engine/species";
 import type { PhotoResult } from "@/play/session";
 import { CameraView, prepareCameraView, type CameraTarget, type ShotResult } from "../_client/CameraView";
 import { animalManifest, type AnimalManifest } from "../_client/animalImages";
-import { CloseButton, Modal } from "../_client/Modal";
+import { Modal } from "../_client/Modal";
 import { useT } from "../_client/i18n";
 import type { OrientationStatus } from "../_client/orientationSource";
 import { mapCompass } from "../_client/mapCompass";
@@ -142,7 +142,6 @@ export function Walk() {
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
       <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} homeArea={v.profile?.home && v.profile.homeRadiusM ? { center: v.profile.home, radiusM: v.profile.homeRadiusM } : null} />
       <div className="statusbar" data-testid="status">
-        <CloseButton href="/" />
         {/* GPS-status visas bara när den är för dålig för att spela. */}
         {v.stage === "walking" && (v.quality === "poor" || v.quality === "unavailable") && <span className={`gps q-${v.quality}`} data-testid="gps-warn">{t(`gps.quality.${v.quality}`)}</span>}
         <span className="spacer" />
@@ -196,6 +195,7 @@ export function Walk() {
           <div className="menulist">
             <button className="btn wide" onClick={() => audio.setEnabled(!soundOn)} aria-pressed={soundOn} data-testid="sound">{soundOn ? t("walk.soundOn") : t("walk.soundOff")}</button>
             <button className="btn wide" onClick={() => { if (!trackUp) void mapCompass.requestPermission(); setTrackUp((x) => !x); }} data-testid="map-orient">{trackUp ? t("map.trackUp") : t("map.northUp")}</button>
+            <Link className="btn wide" href="/" data-testid="menu-home">{t("walk.toHome")}</Link>
             <Link className="btn wide" href="/fieldbook">{t("home.fieldbook")}</Link>
             <Link className="btn wide" href="/settings">{t("home.settings")}</Link>
           </div>
