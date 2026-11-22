@@ -45,7 +45,7 @@ export const PALETTE = {
   water: "#8fc1df",
   waterEdge: "#4e8fbf",
   waterway: "#5c9fd0",
-  path: "#76726a",
+  path: "#8e8a80",
   minor: "#fffaf0",
   minorCase: "#a8957a",
   major: "#f4cf86",
@@ -115,7 +115,7 @@ export const MAP_STYLE: StyleSpecification = {
     { id: "minor-case", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["in", "class", "minor", "service"], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.minorCase, "line-width": w(12, 1.2, 18, 10.5), "line-blur": 0.6 } },
     { id: "major-case", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["in", "class", "motorway", "trunk", ...MAJOR], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.majorCase, "line-width": w(8, 1.2, 12, 3.5, 18, 17), "line-blur": 0.6 } },
     // Alla stigar, gång- och cykelbanor och traktorvägar ser likadana ut: mörkgrå, streckade, tydliga både i skog och i tätort.
-    { id: "path", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["any", ["==", "class", "track"], ["all", ["==", "class", "path"], ["in", "subclass", ...TRAILS, ...WALKWAYS]]], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round" }, paint: { "line-color": PALETTE.path, "line-width": w(12, 0.9, 15, 1.7, 18, 2.8), "line-dasharray": [2.2, 1.5], "line-opacity": 0.9 } },
+    { id: "path", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["any", ["==", "class", "track"], ["all", ["==", "class", "path"], ["in", "subclass", ...TRAILS, ...WALKWAYS]]], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round" }, paint: { "line-color": PALETTE.path, "line-width": w(12, 0.7, 15, 1.3, 18, 2.2), "line-dasharray": [2, 1.8], "line-opacity": 0.75 } },
     { id: "minor", type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["all", ["in", "class", "minor", "service"], ["!=", "brunnel", "tunnel"]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": PALETTE.minor, "line-width": w(12, 0.6, 18, 8) } },
     // Järnväg: kraftig mörk linje med vita streck (klassisk järnvägssignatur), så att den aldrig förväxlas med en stig.
     { id: "railway", type: "line", source: "omt", "source-layer": "transportation", filter: ["all", ["==", "class", "rail"], ["!=", "brunnel", "tunnel"]], layout: { "line-join": "round" }, paint: { "line-color": "#2f2c28", "line-width": w(10, 1.6, 14, 3.5, 18, 7) } },

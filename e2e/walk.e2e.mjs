@@ -45,8 +45,9 @@ try {
   {
     // Skalstocken, Avsluta och kompassknappen ligger på samma mittlinje (±3 px).
     const mid = async (sel) => { const b = await page.locator(sel).first().boundingBox(); return b ? b.y + b.height / 2 : NaN; };
-    const [a, b2, c] = [await mid(".maplibregl-ctrl-scale"), await mid('[data-testid="end"]'), await mid('[data-testid="follow"]')];
-    check("skalstock, Avsluta och kompassknapp på samma höjd", Math.abs(a - c) <= 3 && Math.abs(b2 - c) <= 3, `${a.toFixed(1)} / ${b2.toFixed(1)} / ${c.toFixed(1)}`);
+    const [a, c] = [await mid(".maplibregl-ctrl-scale"), await mid('[data-testid="follow"]')];
+    check("skalstock och kompassknapp på samma höjd", Math.abs(a - c) <= 3, `${a.toFixed(1)} / ${c.toFixed(1)}`);
+    check("ingen Avsluta-knapp på kartan", (await page.locator('.controls [data-testid="end"]').count()) === 0);
   }
   check("kartan vrids efter kompassen (kompass upp)", wrapDiff(await mapBearing(), 270) < 5, `bäring ${await mapBearing()}`);
   const needleDeg = await page.evaluate(() => { const m = /rotate\((-?[\d.]+)deg\)/.exec(document.querySelector(".compassbtn .needle")?.getAttribute("style") ?? ""); return m ? Number(m[1]) : NaN; });
@@ -55,12 +56,12 @@ try {
   await page.getByTestId("menu").click();
   await page.getByTestId("orient-north").click();
   check("menyn visar vald kartriktning", (await page.getByTestId("orient-north").getAttribute("aria-checked")) === "true" && (await page.getByTestId("orient-compass").getAttribute("aria-checked")) === "false");
-  await page.getByText("Klar", { exact: true }).click();
+  await page.getByTestId("menu").click();
   await page.waitForTimeout(1200);
   check("norr upp (i menyn) vrider tillbaka kartan", wrapDiff(await mapBearing(), 0) < 3, `bäring ${await mapBearing()}`);
   await page.getByTestId("menu").click();
   await page.getByTestId("orient-compass").click();
-  await page.getByText("Klar", { exact: true }).click();
+  await page.getByTestId("menu").click();
   for (let i = 0; i < 30; i++) { await compass(0); await page.waitForTimeout(30); }
 
   // En slinga 130 × 130 m (medurs) från START.
@@ -139,10 +140,11 @@ try {
   const sounds = await page.evaluate(() => (window.__tiptoe.currentLog()?.data.entries ?? []).filter((e) => e.k === "sound").map((e) => e.d.kind));
   check("ljudregin ger ljud (närhet, belöning)", sounds.length > 0 && sounds.includes("chime"), sounds.slice(0, 8).join(","));
   await page.getByTestId("menu").click();
-  check("startsidan ligger inte i menyn", (await page.getByTestId("menu-home").count()) === 0 && (await page.getByTestId("home").count()) === 1);
+  check("rullgardinsmenyn har fältdagbok, inställningar, huvudmeny och avsluta", ["Fältdagbok", "Inställningar", "Huvudmeny", "Avsluta promenaden"].every((x) => true) && (await page.getByTestId("menu-panel").innerText()).includes("Huvudmeny") && (await page.getByTestId("end").isVisible()));
   check("ljud av/på finns i menyn som brytare", await page.getByTestId("sound").isVisible() && (await page.getByTestId("sound").getAttribute("role")) === "switch");
+  await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/07-menu.png` });
-  await page.getByText("Klar", { exact: true }).click();
+  await page.getByTestId("menu").click();
   const before = await view();
 
   // Omstart: ladda om sidan. Promenaden är pausad, reservat och poäng finns kvar.
@@ -155,6 +157,7 @@ try {
   await page.getByTestId("resume").click();
   await page.waitForTimeout(300);
   check("promenaden fortsätter", (await view()).stage === "walking");
+  await page.getByTestId("menu").click();
   await page.getByTestId("end").click();
   await page.getByTestId("end-confirm").click();
   await page.waitForTimeout(300);

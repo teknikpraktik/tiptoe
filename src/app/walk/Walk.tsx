@@ -25,10 +25,6 @@ const sentenceName = (name: string, first: boolean) => (first ? name : name.char
 
 const fmtHa = (m2: number) => (m2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1, minimumFractionDigits: m2 < 100_000 ? 1 : 0 });
 
-function HomeIcon() {
-  return <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v9.5h13V10" /><path d="M10 19.5v-5h4v5" /></svg>;
-}
-
 /** Storleksklass för ett okänt djur (en ledtråd utan att avslöja arten). */
 const sizeOf = (sp: SpeciesId): "small" | "medium" | "large" => (SPECIES[sp].heightM < 0.45 ? "small" : SPECIES[sp].heightM < 1 ? "medium" : "large");
 /** Vad djuret gör, för kortet. */
@@ -146,13 +142,11 @@ export function Walk() {
     <main className="mapshell" onPointerDown={() => audio.unlock()}>
       <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} />
       <div className="statusbar" data-testid="status">
-        {/* Till startsidan: promenaden fortsätter i bakgrunden (Avsluta avslutar den). */}
-        <Link className="iconbtn" href="/" aria-label={t("menu.home")} title={t("menu.homeHint")} data-testid="home"><HomeIcon /></Link>
         {/* GPS-status visas bara när den är för dålig för att spela. */}
         {v.stage === "walking" && (v.quality === "poor" || v.quality === "unavailable") && <span className={`gps q-${v.quality}`} data-testid="gps-warn">{t(`gps.quality.${v.quality}`)}</span>}
         <span className="spacer" />
         {v.totalAreaM2 > 0 && <span className="chip" data-testid="area">{t("walk.area", { ha: fmtHa(v.totalAreaM2) })}</span>}
-        <button className="iconbtn" onClick={() => setMenu(true)} aria-label={t("walk.menu")} data-testid="menu"><span className="burger" /></button>
+        <button className={`iconbtn ${menu ? "open" : ""}`} onClick={() => setMenu((x) => !x)} aria-label={t("walk.menu")} aria-expanded={menu} aria-haspopup="menu" data-testid="menu"><span className="burger" /></button>
       </div>
       {v.gpsError && <div className="toast" role="alert">{t(`gps.error.${v.gpsError}`)}</div>}
       {!v.gpsError && v.stage === "walking" && !v.pos && <div className="toast">{t("map.locating")}</div>}
@@ -186,7 +180,6 @@ export function Walk() {
         {v.stage === "idle" && <button className="btn primary" onClick={() => { audio.unlock(); void mapCompass.requestPermission(); void s.start(); }} data-testid="start">{t("walk.start")}</button>}
         {v.stage === "walking" && (
           <>
-            <button className="btn small" onClick={() => setConfirmEnd(true)} data-testid="end">{t("walk.end")}</button>
             {v.photoTarget && (
               <button className="btn primary camera" onClick={openCamera} disabled={!v.photoTarget.ready} data-testid="camera-btn">
                 {v.photoTarget.ready ? `${t("walk.camera")} · ${near ? t(`species.${near.species}`) : ""}` : v.photoTarget.why === "move" ? t("walk.standStill") : t("walk.gpsTooWeak")}
@@ -197,29 +190,32 @@ export function Walk() {
       </div>
 
       {menu && (
-        <Modal title={t("walk.menu")} onClose={() => setMenu(false)} actions={<button className="btn primary" onClick={() => setMenu(false)}>{t("common.done")}</button>}>
-          <div className="sheet">
-            <div className="sheet-group">
-              <div className="sheet-label">{t("menu.mapDirection")}</div>
-              <div className="segmented" role="radiogroup" aria-label={t("menu.mapDirection")}>
+        <>
+          {/* Rullgardinsmeny under menyknappen; ett tryck utanför stänger den. */}
+          <div className="dropdown-scrim" onClick={() => setMenu(false)} />
+          <div className="dropdown" role="menu" aria-label={t("walk.menu")} data-testid="menu-panel">
+            <div className="dd-section">
+              <div className="dd-label">{t("menu.mapDirection")}</div>
+              <div className="segmented small" role="radiogroup" aria-label={t("menu.mapDirection")}>
                 <button role="radio" aria-checked={trackUp} className={trackUp ? "on" : ""} onClick={() => { void mapCompass.requestPermission(); setTrackUp(true); }} data-testid="orient-compass">{t("menu.compassUp")}</button>
                 <button role="radio" aria-checked={!trackUp} className={!trackUp ? "on" : ""} onClick={() => setTrackUp(false)} data-testid="orient-north">{t("menu.northUp")}</button>
               </div>
-              <p className="sheet-hint">{trackUp ? t("menu.compassHint") : t("menu.northHint")}</p>
             </div>
-            <div className="sheet-group">
-              <button className="sheet-row" role="switch" aria-checked={soundOn} onClick={() => audio.setEnabled(!soundOn)} data-testid="sound">
-                <span>{t("menu.sound")}<small>{t("menu.soundHint")}</small></span>
-                <span className={`switch ${soundOn ? "on" : ""}`} aria-hidden="true"><span /></span>
-              </button>
-            </div>
-            <div className="sheet-group">
-              <div className="sheet-label">{t("menu.goTo")}</div>
-              <Link className="sheet-row" href="/fieldbook"><span>{t("home.fieldbook")}</span><span className="chev" aria-hidden="true">›</span></Link>
-              <Link className="sheet-row" href="/settings"><span>{t("home.settings")}<small>{t("menu.settingsHint")}</small></span><span className="chev" aria-hidden="true">›</span></Link>
-            </div>
+            <button className="dd-row" role="switch" aria-checked={soundOn} onClick={() => audio.setEnabled(!soundOn)} data-testid="sound">
+              <span>{t("menu.sound")}</span><span className={`switch ${soundOn ? "on" : ""}`} aria-hidden="true"><span /></span>
+            </button>
+            <div className="dd-sep" />
+            <Link className="dd-row" role="menuitem" href="/fieldbook">{t("home.fieldbook")}<span className="chev" aria-hidden="true">›</span></Link>
+            <Link className="dd-row" role="menuitem" href="/settings">{t("home.settings")}<span className="chev" aria-hidden="true">›</span></Link>
+            <Link className="dd-row" role="menuitem" href="/" data-testid="menu-home"><span>{t("menu.home")}<small>{t("menu.homeHint")}</small></span><span className="chev" aria-hidden="true">›</span></Link>
+            {v.stage === "walking" && (
+              <>
+                <div className="dd-sep" />
+                <button className="dd-row danger" role="menuitem" onClick={() => { setMenu(false); setConfirmEnd(true); }} data-testid="end">{t("menu.endWalk")}</button>
+              </>
+            )}
           </div>
-        </Modal>
+        </>
       )}
       {v.stage === "paused" && (
         <Modal title={t("walk.pausedTitle")} actions={<>
