@@ -92,16 +92,3 @@ describe("export och import av profil (spec: Export och import)", () => {
     void unzipSync;
   });
 });
-
-import { exportReminder } from "@/storage/reminder";
-describe("exportpåminnelse", () => {
-  const day = 86_400_000;
-  it("efter tre promenader sedan senaste export, eller 14 dagar med nya promenader; aldrig utan nya promenader", () => {
-    expect(exportReminder([], null, 0)).toBe(false);
-    expect(exportReminder([1, 2], null, 3)).toBe(false);
-    expect(exportReminder([1, 2, 3], null, 4)).toBe(true);
-    expect(exportReminder([1, 2, 3], 10, 20)).toBe(false);
-    expect(exportReminder([20 * day], 10 * day, 25 * day)).toBe(true);
-    expect(exportReminder([20 * day], 10 * day, 22 * day)).toBe(false);
-  });
-});

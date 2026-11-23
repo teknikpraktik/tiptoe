@@ -88,7 +88,7 @@ export class Repo {
     return np;
   }
   async setActiveProfile(id: string): Promise<void> { await this.db.store("meta").put("activeProfile", id); }
-  /** Senaste export (ms) för profilen, för exportpåminnelsen. */
+  /** Senaste export (ms) för profilen (visas under Säkerhetskopia). */
   async lastExport(profileId: string): Promise<number | null> { return (await this.db.store<number>("meta").get(`lastExport:${profileId}`)) ?? null; }
   async setLastExport(profileId: string, t: number): Promise<void> { await this.db.store("meta").put(`lastExport:${profileId}`, t); }
 

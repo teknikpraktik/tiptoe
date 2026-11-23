@@ -311,8 +311,6 @@ export const sv = {
   "backup.error.newer_schema": `Filen kommer från en nyare version av ${BRAND.prose.sv}. Uppdatera appen först.`,
   "backup.error.invalid_data": "Filen är skadad eller ändrad och kan inte läsas.",
   "backup.error.missing_photo": "Filen saknar foton och kan inte läsas.",
-  "backup.reminder": "Du har inte exporterat dina fynd på ett tag. Gör en säkerhetskopia i inställningarna.",
-  "backup.reminderAction": "Exportera",
 
   "spike.species": "Art (* = platshållare)",
   "spike.poseRest": "Vilar",
