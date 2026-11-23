@@ -236,3 +236,11 @@ html:has(.mapshell), html:has(.mapshell) body { background: #efe6d2; }
 .iconbtn.open { background: var(--accent); }
 .iconbtn.open .burger, .iconbtn.open .burger::before, .iconbtn.open .burger::after { background: var(--accent-ink); }
 .controls .btn { white-space: nowrap; padding: 0 16px; }
+
+/* Startsidans kort för en pågående promenad, och sammanfattningen efter en avslutad. */
+.walkcard { display: flex; flex-direction: column; gap: 10px; text-align: center; background: #1f231ce0; }
+.walkcard p { margin: 0; font-weight: 600; }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.summary div { display: flex; flex-direction: column; align-items: center; padding: 12px 4px; border-radius: 12px; background: #ffffff0d; }
+.summary b { font-size: 20px; }
+.summary span { font-size: 12px; color: var(--muted); }

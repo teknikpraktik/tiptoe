@@ -1,10 +1,10 @@
-import { fromLocal, toLocal, type LatLon } from "@/geo/geometry";
+import { fromLocal, haversineM, toLocal, type LatLon } from "@/geo/geometry";
 import { multiArea, polyArea, ringArea, type MultiPoly, type Poly, type PolygonOps, type Pt } from "./ops";
 
 /**
  * Reservatsgeometri, "buffra och fyll" (spec: Reservat → Geometri och Validering). Ren funktion, körbar i Node.
  *
- * 1. Spåret delas i sammanhängande delar: dåliga fixar bort, enstaka GPS-hopp bort, glapp under 50 m (och tidsmässigt rimliga) överbryggas,
+ * 1. Spåret delas i sammanhängande delar: dåliga fixar bort, enstaka GPS-hopp bort, glapp under 50 m (och tidsmässigt rimliga) och avbrott upp till 300 m i gångfart överbryggas,
  *    längre glapp och för hög fart bryter spåret.
  * 2. Varje del förenklas (Douglas–Peucker) och buffras med halva slutningstoleransen till en korridor.
  * 3. Korridoren slås ihop med spelarens befintliga reservat. Varje inre hål som korridoren gränsar till och som är minst 0,1 ha är innesluten yta.
@@ -37,6 +37,13 @@ export interface ReserveOptions {
   /** Glapp mellan två spårpunkter som överbryggas (m, s). */
   bridgeGapM: number;
   bridgeGapS: number;
+  /**
+   * Längre glapp (avbrott: samtal, appen i bakgrunden, en titt i menyn) fylls också i med en rak linje, om de är högst `longGapM` långa,
+   * högst `longGapS` sekunder och snittfarten över glappet är högst `longGapMps` (gång eller lugn löpning; inte bil).
+   */
+  longGapM: number;
+  longGapS: number;
+  longGapMps: number;
   /** Maxfart (m/s) och hur länge den får överskridas (s) innan spåret bryts. */
   maxSpeedMps: number;
   speedToleranceS: number;
@@ -55,6 +62,9 @@ export const DEFAULT_RESERVE_OPTIONS: ReserveOptions = {
   minNewAreaM2: 1000,
   bridgeGapM: 50,
   bridgeGapS: 120,
+  longGapM: 300,
+  longGapS: 3600,
+  longGapMps: 9 / 3.6,
   maxSpeedMps: 12 / 3.6,
   speedToleranceS: 20,
   jumpSpeedMps: 25 / 3.6,
@@ -84,6 +94,36 @@ export interface ReserveResult {
 
 // ---------- 1. Spårets delar ----------
 
+/** Glapp som binds ihop med en rak linje: korta glapp som förut, och avbrott upp till `longGapM` i gångfart (generöst; inte bil). */
+export function bridgeable(dM: number, dtS: number, o: Pick<ReserveOptions, "bridgeGapM" | "bridgeGapS" | "longGapM" | "longGapS" | "longGapMps">): boolean {
+  if (dM < o.bridgeGapM && dtS <= o.bridgeGapS) return true;
+  return dM <= o.longGapM && dtS <= o.longGapS && dM / Math.max(1, dtS) <= o.longGapMps;
+}
+
+/** Gräns (m) över vilken ett överbryggat glapp visas streckat på kartan (ifyllt, inte gånget). */
+export const DRAWN_GAP_M = 30;
+
+/**
+ * Spåret för kartan: heldragna delar som gåtts, streckade raka linjer där ett glapp fyllts i, och inget alls över glapp som inte
+ * godtas (t.ex. en bilresa). Samma regel som reservatsberäkningen.
+ */
+export function trackForMap(pts: TrackPoint[], o: ReserveOptions = DEFAULT_RESERVE_OPTIONS): { solid: LatLon[][]; bridged: [LatLon, LatLon][] } {
+  const solid: LatLon[][] = [];
+  const bridged: [LatLon, LatLon][] = [];
+  let cur: LatLon[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i], q = pts[i - 1];
+    if (!q) { cur.push(p); continue; }
+    const d = haversineM(q, p), dt = (p.tMs - q.tMs) / 1000;
+    if (d < DRAWN_GAP_M || (d < o.bridgeGapM && dt <= o.bridgeGapS)) { cur.push(p); continue; }
+    if (cur.length > 1) solid.push(cur);
+    if (bridgeable(d, dt, o)) bridged.push([q, p]);
+    cur = [p];
+  }
+  if (cur.length) solid.push(cur);
+  return { solid, bridged };
+}
+
 export function splitTrack(pts: TrackPoint[], o: ReserveOptions, origin: LatLon): { runs: (Pt & { t: number })[][]; breaks: ReserveResult["breaks"] } {
   const breaks: ReserveResult["breaks"] = [];
   const good = pts.filter((p) => {
@@ -111,7 +151,7 @@ export function splitTrack(pts: TrackPoint[], o: ReserveOptions, origin: LatLon)
     if (!prev) { run.push(p); continue; }
     const d = Math.hypot(p.x - prev.x, p.y - prev.y), dt = (p.t - prev.t) / 1000;
     const v = d / Math.max(0.5, dt);
-    if (d >= o.bridgeGapM || dt > o.bridgeGapS) { breaks.push({ atMs: p.t, reason: "gap" }); close(); fastSince = null; run.push(p); continue; }
+    if (!bridgeable(d, dt, o)) { breaks.push({ atMs: p.t, reason: "gap" }); close(); fastSince = null; run.push(p); continue; }
     if (v > o.jumpSpeedMps) { breaks.push({ atMs: p.t, reason: "speed" }); close(); fastSince = null; run.push(p); continue; }
     if (v > o.maxSpeedMps) {
       if (fastSince === null) { fastSince = prev.t; fastStartIdx = run.length - 1; }

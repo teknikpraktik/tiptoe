@@ -5,11 +5,12 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { levelForArea } from "@/engine/levels";
 import { SPECIES, type SpeciesId } from "@/engine/species";
-import type { PhotoResult } from "@/play/session";
+import type { PhotoResult, WalkSummary } from "@/play/session";
+import { useRouter } from "next/navigation";
 import { CameraView, prepareCameraView, type CameraTarget, type ShotResult } from "../_client/CameraView";
 import { animalManifest, type AnimalManifest } from "../_client/animalImages";
 import { Modal } from "../_client/Modal";
-import { useT } from "../_client/i18n";
+import { useLang, useT } from "../_client/i18n";
 import type { OrientationStatus } from "../_client/orientationSource";
 import { mapCompass } from "../_client/mapCompass";
 import { useSession, useWalkView } from "../_client/SessionProvider";
@@ -44,6 +45,15 @@ export function Walk() {
   useEffect(() => { mapCompass.start(); }, []);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [summary, setSummary] = useState<WalkSummary | null>(null);
+  const router = useRouter();
+  const { lang } = useLang();
+  // En promenad är igång eller avslutad: en sparad (t.ex. efter omstart eller profilbyte) fortsätter direkt när kartan visas.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (ctx && v?.stage === "paused" && !resumed.current) { resumed.current = true; void ctx.session.start(); }
+    if (v?.stage === "walking") resumed.current = false;
+  }, [ctx, v?.stage]);
   const needle = useRef<HTMLSpanElement>(null);
   const [camera, setCamera] = useState<{ id: string; orientation: OrientationStatus } | null>(null);
   const [target, setTarget] = useState<CameraTarget | null>(null);
@@ -139,8 +149,8 @@ export function Walk() {
   const near = v.photoTarget ? v.animals.find((a) => a.id === v.photoTarget!.id) : null;
 
   return (
-    <main className="mapshell" onPointerDown={() => audio.unlock()}>
-      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.track} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} />
+    <main className="mapshell" onPointerDown={() => { audio.unlock(); void s.enableMotion(); }}>
+      <GameMap player={v.pos} accuracyM={v.accuracyM} heading={v.headingDeg} getHeading={getHeading} trackUp={trackUp} follow={follow} onUserMove={() => setFollow(false)} scale track={v.trackMap} reserves={reserves} reserveLevels={reserveLevels} closure={closure} animals={animals} sightings={sightings} trails={v.trails} onAnimalTap={setPicked} needle={needle} />
       <div className="statusbar" data-testid="status">
         {/* GPS-status visas bara när den är för dålig för att spela. */}
         {v.stage === "walking" && (v.quality === "poor" || v.quality === "unavailable") && <span className={`gps q-${v.quality}`} data-testid="gps-warn">{t(`gps.quality.${v.quality}`)}</span>}
@@ -217,15 +227,21 @@ export function Walk() {
           </div>
         </>
       )}
-      {v.stage === "paused" && (
-        <Modal title={t("walk.pausedTitle")} actions={<>
-          <button className="btn primary" onClick={() => { audio.unlock(); void s.start(); }} data-testid="resume">{t("walk.resume")}</button>
-          <button className="btn" onClick={() => void s.end()}>{t("walk.end")}</button>
-        </>}><p>{t("walk.pausedBody")}</p></Modal>
+      {summary && (
+        <Modal title={t("summary.title")} actions={<button className="btn primary" onClick={() => { setSummary(null); router.push("/"); }} data-testid="summary-ok">{t("summary.ok")}</button>}>
+          <div className="summary" data-testid="summary">
+            <div><b>{(summary.distanceM / 1000).toLocaleString(lang === "sv" ? "sv-SE" : "en-GB", { maximumFractionDigits: 1 })} km</b><span>{t("summary.distance")}</span></div>
+            <div><b>{Math.round(summary.durationS / 60)} min</b><span>{t("summary.time")}</span></div>
+            <div><b>{summary.photos}</b><span>{t("summary.photos")}</span></div>
+            <div><b>{summary.newSpecies}</b><span>{t("summary.newSpecies")}</span></div>
+            <div><b>{fmtHa(summary.addedM2)} ha</b><span>{t("summary.area")}</span></div>
+            <div><b>{summary.points}</b><span>{t("summary.points")}</span></div>
+          </div>
+        </Modal>
       )}
       {confirmEnd && (
         <Modal title={t("walk.endConfirm")} onClose={() => setConfirmEnd(false)} actions={<>
-          <button className="btn primary" onClick={() => { setConfirmEnd(false); void s.end(); }} data-testid="end-confirm">{t("walk.end")}</button>
+          <button className="btn primary" onClick={async () => { setConfirmEnd(false); setSummary(await s.end()); }} data-testid="end-confirm">{t("walk.end")}</button>
           <button className="btn" onClick={() => setConfirmEnd(false)}>{t("common.cancel")}</button>
         </>}><p>{t("walk.endBody")}</p></Modal>
       )}

@@ -133,4 +133,30 @@ describe("promenadsessionen", () => {
     await a.s.end();
     a.db.close();
   });
+
+  it("ett avbrott i gångfart fylls i på kartan; ett långt hopp (bil) ger ett meddelande och bryter spåret", async () => {
+    const a = await setup("tiptoe-test-gap");
+    await a.s.init("sv");
+    await a.s.start();
+    a.fix(simPoint(-500, 300));
+    await a.walkTo([-500, 300], [-500, 400]);
+    // Samtal: 3 minuter utan fixar, 200 m längre bort.
+    a.advance(180_000);
+    a.fix(simPoint(-500, 600));
+    await a.walkTo([-500, 600], [-500, 650]);
+    let v = a.s.getView();
+    expect(v.trackMap.bridged).toHaveLength(1);
+    expect(v.notice?.key).not.toBe("walk.trackGap");
+    // Bil: 2 km på 2 minuter.
+    a.advance(120_000);
+    a.fix(simPoint(1500, 600));
+    await a.walkTo([1500, 600], [1500, 650]);
+    v = a.s.getView();
+    expect(v.trackMap.bridged).toHaveLength(1);
+    expect(v.trackMap.solid.length).toBeGreaterThanOrEqual(3);
+    expect(a.logs.some((l) => l.event === "track_gap")).toBe(true);
+    const sum = await a.s.end();
+    expect(sum?.distanceM).toBeGreaterThan(100);
+    a.db.close();
+  });
 });

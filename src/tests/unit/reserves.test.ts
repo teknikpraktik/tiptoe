@@ -32,15 +32,34 @@ for (const ops of LIBS) describe(`reservatsgeometri (${ops.name})`, () => {
     for (const g of [10, 20, 30]) expect(run(ops, walk(rect(0, 0, 150, 150, g))).created, `glapp ${g}`).toHaveLength(1);
     for (const g of [80, 100]) expect(run(ops, walk(rect(0, 0, 150, 150, g))).created, `glapp ${g}`).toHaveLength(0);
   });
-  it("ett glapp i spåret under 50 m överbryggas, över 50 m bryts det", () => {
+  it("ett glapp i gångfart överbryggas (som när man pratar i telefon och går vidare); i bilfart bryts spåret", () => {
     const loop = walk(rect(0, 0, 150, 150));
-    // Ta bort punkter så att det blir ett hål i spåret mitt på en sida.
+    // Ta bort punkter så att det blir ett hål i spåret mitt på en sida. Tiden går som om man gått sträckan.
     const cut = (len: number) => { const i = 40, k = Math.round(len / 5); return [...loop.slice(0, i), ...loop.slice(i + k)]; };
     expect(run(ops, cut(40)).created).toHaveLength(1);
-    const broken = run(ops, cut(70));
+    expect(run(ops, cut(70)).created).toHaveLength(1);
+    // Samma 70 m men på 5 s (14 m/s, bil): bryts, och slingan sluts inte.
+    const fast = (() => { const i = 40, k = 14; const a = loop.slice(0, i), b = loop.slice(i + k); const shift = b[0].tMs - a[a.length - 1].tMs - 5000; return [...a, ...b.map((p) => ({ ...p, tMs: p.tMs - shift }))]; })();
+    const broken = run(ops, fast);
     expect(broken.breaks.some((b) => b.reason === "gap")).toBe(true);
-    // 70 m glapp på en sida av en 150 m-kvadrat: bufferten (2 × 18 m) räcker inte för att sluta den.
     expect(broken.created).toHaveLength(0);
+  });
+  it("avbrott: 200 m under ett samtal på 4 minuter fylls i och slingan blir ett reservat; 1,8 km eller över en timme gör det inte", () => {
+    // En slinga 300 × 300 m där en hel sida (200 m av 300) saknas: spelaren pratade i telefon.
+    const sides = walk(rect(0, 0, 300, 300));
+    const startGap = sides.findIndex((p) => p.tMs > sides[0].tMs + (350 / 1.3) * 1000);
+    const resume = startGap + Math.round(200 / 5);
+    const callLoop = [...sides.slice(0, startGap), ...sides.slice(resume).map((p) => ({ ...p, tMs: p.tMs + 90_000 }))];
+    const ok = run(ops, callLoop);
+    expect(ok.breaks.some((b) => b.reason === "gap")).toBe(false);
+    expect(ok.created).toHaveLength(1);
+    // Över en timme: bryts (glömd promenad).
+    const late = [...sides.slice(0, startGap), ...sides.slice(resume).map((p) => ({ ...p, tMs: p.tMs + 3_700_000 }))];
+    expect(run(ops, late).breaks.some((b) => b.reason === "gap")).toBe(true);
+    // 1,8 km bort: bryts.
+    const a = walk([[0, 0], [100, 0]]);
+    const b = walk([[1900, 0], [2000, 0]], { t0: a[a.length - 1].tMs + 600_000 });
+    expect(run(ops, [...a, ...b]).breaks.some((x) => x.reason === "gap")).toBe(true);
   });
   it("ett GPS-hopp (en punkt 300 m bort) skapar ingen orimlig areal", () => {
     const loop = walk(rect(0, 0, 100, 120));
@@ -139,6 +158,7 @@ for (const ops of LIBS) describe(`reservatsgeometri (${ops.name})`, () => {
   it("standardvärdena följer specen", () => {
     expect(DEFAULT_RESERVE_OPTIONS.minNewAreaM2).toBe(1000);
     expect(DEFAULT_RESERVE_OPTIONS.bridgeGapM).toBe(50);
+    expect([DEFAULT_RESERVE_OPTIONS.longGapM, DEFAULT_RESERVE_OPTIONS.longGapS, Math.round(DEFAULT_RESERVE_OPTIONS.longGapMps * 3.6)]).toEqual([300, 3600, 9]);
     expect(ha(DEFAULT_RESERVE_OPTIONS.maxNewAreaPerWalkM2)).toBe(50);
     expect(DEFAULT_RESERVE_OPTIONS.maxAccuracyM).toBe(30);
     expect(DEFAULT_RESERVE_OPTIONS.halfToleranceM).toBeGreaterThanOrEqual(15);
@@ -155,5 +175,17 @@ describe("spårhjälpare", () => {
   it("splitTrack: tomt spår och enstaka punkt", () => {
     expect(splitTrack([], DEFAULT_RESERVE_OPTIONS, ORIGIN).runs).toHaveLength(0);
     expect(splitTrack(walk([[0, 0]]), DEFAULT_RESERVE_OPTIONS, ORIGIN).runs).toHaveLength(0);
+  });
+});
+
+describe("spåret på kartan", () => {
+  it("gångna delar heldragna, ifyllda glapp som raka streckade linjer, inget över glapp som inte godtas", async () => {
+    const { trackForMap } = await import("@/geo/reserves/reserves");
+    const a = walk([[0, 0], [100, 0]]);
+    const b = walk([[300, 0], [400, 0]], { t0: a[a.length - 1].tMs + 180_000 }); // 200 m på 3 min: ifyllt
+    const c = walk([[3000, 0], [3100, 0]], { t0: b[b.length - 1].tMs + 120_000 }); // 2,6 km på 2 min: inte
+    const m = trackForMap([...a, ...b, ...c]);
+    expect(m.solid).toHaveLength(3);
+    expect(m.bridged).toHaveLength(1);
   });
 });

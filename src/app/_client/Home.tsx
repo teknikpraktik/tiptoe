@@ -21,6 +21,11 @@ export function homeBackground(tMs: number): string {
   return `/backgrounds/${HOME_BACKGROUNDS[day % HOME_BACKGROUNDS.length]}.webp`;
 }
 
+/** En promenad som varit inaktiv längre än så här frågas om när appen öppnas (fortsätta eller avsluta), i stället för att öppnas direkt. */
+export const STALE_WALK_MS = 3 * 3_600_000;
+/** Bara första gången startsidan visas efter att appen öppnats: en pågående promenad öppnas då direkt (inte när man går hit från kartan). */
+let launchHandled = false;
+
 /** Startskärmen: namnet, Starta promenad, (senare) fältdagbok och inställningar, och uppmaningen att installera före första promenaden. */
 export function Home() {
   const t = useT();
@@ -49,6 +54,15 @@ export function Home() {
     router.push("/walk");
   };
   const going = v?.stage === "walking" || v?.stage === "paused";
+  // Öppnas appen med en promenad igång kommer man direkt till kartan; efter ett långt uppehåll frågas först.
+  const [stale, setStale] = useState(false);
+  useEffect(() => {
+    if (!v || v.stage === "loading" || launchHandled) return;
+    launchHandled = true;
+    if (!going) return;
+    if (v.lastActiveAtMs != null && Date.now() - v.lastActiveAtMs > STALE_WALK_MS) setStale(true);
+    else router.replace("/walk");
+  }, [v, going, router]);
   // I webbläsarläge varnas en gång per sidvisning innan en ny promenad (spec: varnar i Safari-läge).
   const start = () => (!standalone && !going ? setWarn(true) : void go());
 
@@ -78,10 +92,23 @@ export function Home() {
         {v && v.storage === "ok" && (
           <p className="muted center" data-testid="stats"><b>{t(`title.${titleFor(v.score.species.length)}`)}</b> · {t("home.stats", { points: v.score.total, species: v.score.species.length, total: ALL_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
         )}
-        <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{going ? t("walk.resume") : t("home.startWalk")}</button>
+        {going && v?.walk ? (
+          <div className="card walkcard" data-testid="walk-active">
+            <p>{t("home.walkActive", { km: (v.walk.distanceM / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }), min: Math.max(0, Math.round((Date.now() - v.walk.startedAt) / 60_000)) })}</p>
+            <button className="btn primary wide" onClick={() => { audio.unlock(); router.push("/walk"); }} data-testid="home-start">{t("home.toWalk")}</button>
+          </div>
+        ) : (
+          <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{t("home.startWalk")}</button>
+        )}
         <Link className="btn ghost" href="/fieldbook" data-testid="home-fieldbook">{t("home.fieldbook")}</Link>
         <Link className="btn ghost" href="/settings" data-testid="home-settings">{t("home.settings")}</Link>
       </nav>
+      {stale && v?.walk && (
+        <Modal title={t("home.staleTitle", { when: new Date(v.lastActiveAtMs ?? v.walk.startedAt).toLocaleString(v.profile?.lang === "en" ? "en-GB" : "sv-SE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) })} actions={<>
+          <button className="btn primary" onClick={() => { setStale(false); audio.unlock(); router.push("/walk"); }} data-testid="stale-continue">{t("home.staleContinue")}</button>
+          <button className="btn" onClick={async () => { setStale(false); await ctx?.session.end(); }} data-testid="stale-end">{t("home.staleEnd")}</button>
+        </>}><p>{t("home.staleBody")}</p></Modal>
+      )}
       {howto && (
         <Modal title={t("howto.title")} onClose={() => setHowto(false)} actions={<button className="btn primary" onClick={() => setHowto(false)}>{t("howto.ok")}</button>}>
           <ol className="howto" data-testid="howto-steps">

@@ -12,7 +12,7 @@ import { SPECIES, type SpeciesId, type Tempo } from "@/engine/species";
 import type { Environment } from "@/geo/environment";
 import { bearingDeg, haversineM, type LatLon } from "@/geo/geometry";
 import { clipper2Ts } from "@/geo/reserves/ops-clipper2-ts";
-import { computeReserves, totalAreaM2, type Reserve, type TrackPoint } from "@/geo/reserves/reserves";
+import { bridgeable, computeReserves, DEFAULT_RESERVE_OPTIONS, totalAreaM2, trackForMap, type Reserve, type TrackPoint } from "@/geo/reserves/reserves";
 import { GpsFilter } from "@/gps/filters/filter";
 import { GpsProvider, type GeoLike, type GpsErrorCode, type GpsEvent } from "@/gps/provider/provider";
 import { canPhotograph as gpsPhotoOk, canTrack, type GpsQuality } from "@/gps/types";
@@ -68,6 +68,10 @@ export interface WalkView {
   tempoSource: "motion" | "gps";
   gpsError: GpsErrorCode | null;
   track: LatLon[];
+  /** Spåret för kartan: gångna delar, ifyllda glapp (raka linjer) och inget över glapp som inte godtas (samma regel som reservaten). */
+  trackMap: { solid: LatLon[][]; bridged: [LatLon, LatLon][] };
+  /** Senaste spårpunkt eller promenadens start (ms), för frågan efter ett långt uppehåll. */
+  lastActiveAtMs: number | null;
   reserves: Reserve[];
   totalAreaM2: number;
   lastClosure: ClosureView | null;
@@ -89,7 +93,10 @@ export interface WalkView {
   storage: "ok" | "none";
 }
 
-export type NoticeKey = "walk.movedIn" | "walk.levelUp" | "walk.levelSpecies" | "walk.observation" | "walk.lookUp";
+export type NoticeKey = "walk.movedIn" | "walk.levelUp" | "walk.levelSpecies" | "walk.observation" | "walk.lookUp" | "walk.trackGap";
+
+/** Sammanfattning efter en avslutad promenad. */
+export interface WalkSummary { distanceM: number; durationS: number; photos: number; points: number; addedM2: number; newSpecies: number }
 
 /** Påminnelse att titta upp (spec: Säkerhet för barn): efter så här länge i rörelse, högst så här ofta. */
 export const LOOK_UP = { afterMs: 120_000, everyMs: 300_000 } as const;
@@ -137,6 +144,11 @@ export class WalkSession {
   private setAmbience(a: Ambience) { if (a !== this.ambience) { this.ambience = a; this.d.onAmbience?.(a); } }
   private playSound(c: SoundCue) { this.d.onSound?.(c); this.log("sound", { kind: c.kind, pan: Math.round(c.pan * 100) / 100, gain: Math.round(c.gain * 100) / 100 }); }
   private residents: Resident[] = [];
+  /** Spårets delar för vyn (lista, karta och senaste aktivitet). */
+  private trackView(): Pick<WalkView, "track" | "trackMap" | "lastActiveAtMs"> {
+    const last = this.track[this.track.length - 1];
+    return { track: this.track.map(ll), trackMap: trackForMap(this.track), lastActiveAtMs: last?.tMs ?? this.view.walk?.startedAt ?? null };
+  }
   private notify(key: NoticeKey, vars: Record<string, string | number>) { this.set({ notice: { id: ++this.noticeSeq, key, vars } }); }
   /** Profilens värld till motorn: nivåer ur reservaten och de inflyttade. */
   private syncProfileWorld(reserves = this.view.reserves) {
@@ -148,7 +160,7 @@ export class WalkSession {
     this.provider = new GpsProvider(d.geo, () => this.now());
     this.view = {
       stage: "loading", profile: null, profiles: [], walk: null, pos: null, accuracyM: null, quality: "unavailable", headingDeg: null, tempo: "still", tempoSource: "gps", gpsError: null,
-      track: [], reserves: [], totalAreaM2: 0, lastClosure: null, notice: null, levelInfo: null, sightings: [], trails: [], freeze: null, animals: [], photoTarget: null, score: scoreFrom([]), env: "none", storage: d.repo ? "ok" : "none",
+      track: [], trackMap: { solid: [], bridged: [] }, lastActiveAtMs: null, reserves: [], totalAreaM2: 0, lastClosure: null, notice: null, levelInfo: null, sightings: [], trails: [], freeze: null, animals: [], photoTarget: null, score: scoreFrom([]), env: "none", storage: d.repo ? "ok" : "none",
     };
   }
 
@@ -190,11 +202,12 @@ export class WalkSession {
       const saved = await loadLog(repo.db, active.id).catch(() => undefined);
       this.fieldLog = saved ? FieldLog.fromData(saved) : new FieldLog(active.id, this.now(), this.d.build ?? "dev", this.d.userAgent, this.d.standalone);
       if (snap) { this.addedThisWalkM2 = snap.addedThisWalkM2; this.engine = new WorldEngine(snap.engine, emptyEnv); this.syncProfileWorld(reserves); }
-      this.set({ ...patch, stage: "paused", walk: active, track: this.track.map(ll) });
+      this.set({ ...patch, stage: "paused", walk: active });
+      this.set({ ...this.trackView(), lastActiveAtMs: this.track[this.track.length - 1]?.tMs ?? active.startedAt });
       this.log("restore", { walk: active.id, points: this.track.length, snapshot: !!snap });
       return;
     }
-    this.set({ ...patch, stage: "idle", walk: null, track: [] });
+    this.set({ ...patch, stage: "idle", walk: null, track: [], trackMap: { solid: [], bridged: [] }, lastActiveAtMs: null });
   }
 
   // ---------- profiler (spec: flera lokala profiler per telefon) ----------
@@ -275,12 +288,15 @@ export class WalkSession {
     this.engine ??= new WorldEngine(newEngineState(this.now()), emptyEnv);
     this.syncProfileWorld();
     this.obsKm = Math.floor(this.engine.s.metersWalked / OBSERVATION.everyM);
-    this.set({ stage: "walking", walk, track: this.track.map(ll) });
+    this.set({ stage: "walking", walk });
+    this.set(this.trackView());
     this.startSensors(motion === "granted");
     void this.acquireWakeLock();
   }
 
-  async end(): Promise<void> {
+  async end(): Promise<WalkSummary | null> {
+    let summary: WalkSummary | null = null;
+    const speciesBefore = new Set(this.observations.filter((o) => o.walkId !== this.view.walk?.id && o.stars > 0).map((o) => o.species));
     this.stopSensors();
     this.setAmbience("none");
     this.sound.reset();
@@ -294,11 +310,21 @@ export class WalkSession {
       await repo.saveWalk(done);
       await repo.deleteSnapshot(p.id, w.id);
       this.log("walk_end", { walk: w.id, points: this.track.length, addedM2: Math.round(this.addedThisWalkM2) });
+      const mine = this.observations.filter((o) => o.walkId === w.id && o.stars > 0);
+      summary = { distanceM: w.distanceM, durationS: Math.max(0, Math.round((done.endedAt - w.startedAt) / 1000)), photos: w.photos, points: w.points, addedM2: Math.max(this.addedThisWalkM2, w.addedM2 ?? 0), newSpecies: new Set(mine.map((o) => o.species).filter((x) => !speciesBefore.has(x))).size };
     }
     this.engine = null;
     this.fieldLog = null;
     this.track = [];
-    this.set({ stage: "idle", walk: null, track: [], animals: [], photoTarget: null, lastClosure: null });
+    this.set({ stage: "idle", walk: null, track: [], trackMap: { solid: [], bridged: [] }, lastActiveAtMs: null, animals: [], photoTarget: null, lastClosure: null });
+    return summary;
+  }
+
+  /** Rörelsesensorn efter en återupptagen promenad (iOS kräver en användargest): anropas vid första trycket på kartan. */
+  async enableMotion(): Promise<void> {
+    if (this.steps || !this.d.motion || this.view.stage !== "walking") return;
+    const r = await this.d.motion.requestPermission().catch(() => "denied" as const);
+    if (r === "granted" && !this.steps) { this.steps = new StepDetector(); this.d.motion.start((m, t) => this.steps?.push(m, t)); }
   }
 
   // ---------- sensorer ----------
@@ -367,6 +393,14 @@ export class WalkSession {
   private appendTrack(p: TrackPoint) {
     const last = this.track[this.track.length - 1];
     if (last && haversineM(last, p) < TRACK_MIN_STEP_M) return;
+    // Ett glapp som inte fylls i (för långt eller för fort, t.ex. bil): spåret fortsätter härifrån.
+    if (last) {
+      const d = haversineM(last, p), dt = (p.tMs - last.tMs) / 1000;
+      if (d >= DEFAULT_RESERVE_OPTIONS.bridgeGapM && !bridgeable(d, dt, DEFAULT_RESERVE_OPTIONS)) {
+        this.notify("walk.trackGap", { km: (d / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) });
+        this.log("track_gap", { m: Math.round(d), s: Math.round(dt) });
+      }
+    }
     this.track.push(p);
     if (!this.trackDirtySince) this.trackDirtySince = this.now();
     const w = this.view.walk, repo = this.d.repo;
@@ -376,7 +410,7 @@ export class WalkSession {
       this.savedChunks = Math.max(this.savedChunks, seq + 1);
       if (last) w.distanceM += haversineM(last, p);
     }
-    this.set({ track: this.track.map(ll) });
+    this.set(this.trackView());
   }
 
   // ---------- motor, reservat, ögonblicksbild ----------
