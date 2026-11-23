@@ -147,21 +147,24 @@ try {
   await page.getByTestId("menu").click();
   const before = await view();
 
-  // Omstart: ladda om sidan. Promenaden är pausad, reservat och poäng finns kvar.
-  await page.reload();
-  await page.waitForFunction(() => !!window.__tiptoe, null, { timeout: 10000 });
-  await page.getByTestId("resume").waitFor({ timeout: 10000 });
+  // Omstart: appen öppnas igen på startsidan. En promenad som är igång öppnas direkt (ingen paus), med reservat, spår och poäng kvar.
+  // Testets simulerade klocka ligger i juni, så promenaden räknas som gammal (> 3 h): först frågas Fortsätt/Avsluta.
+  await page.goto(base + "/");
+  await page.getByTestId("stale-continue").waitFor({ timeout: 10000 }).catch(() => undefined);
+  check("efter långt uppehåll: frågan Fortsätt/Avsluta visas", (await page.getByTestId("stale-continue").count()) === 1 && (await page.getByTestId("stale-end").count()) === 1);
+  await page.getByTestId("stale-continue").click().catch(() => undefined);
+  await page.waitForURL("**/walk/", { timeout: 10000 }).catch(() => undefined);
+  await page.waitForFunction(() => window.__tiptoe?.getView().stage === "walking", null, { timeout: 10000 }).catch(() => undefined);
   const after = await view();
-  check("efter omstart: promenaden är pausad och kan fortsätta", after.stage === "paused");
+  check("Fortsätt öppnar promenaden och den är igång direkt (ingen paus)", page.url().endsWith("/walk/") && after.stage === "walking", `${page.url()} ${after.stage}`);
   check("efter omstart: reservat, spår och poäng finns kvar", after.reserves === before.reserves && after.track === before.track && after.score === before.score, `reservat ${after.reserves}, spår ${after.track}, poäng ${after.score}`);
-  await page.getByTestId("resume").click();
-  await page.waitForTimeout(300);
-  check("promenaden fortsätter", (await view()).stage === "walking");
+  await clock();
   await page.getByTestId("menu").click();
   await page.getByTestId("end").click();
   await page.getByTestId("end-confirm").click();
-  await page.waitForTimeout(300);
-  check("promenaden avslutas", (await view()).stage === "idle");
+  await page.getByTestId("summary").waitFor({ timeout: 5000 }).catch(() => undefined);
+  check("promenaden avslutas med en sammanfattning", (await view()).stage === "idle" && /km/.test(await page.getByTestId("summary").innerText().catch(() => "")), (await page.getByTestId("summary").innerText().catch(() => "")).replace(/\n/g, " "));
+  await page.screenshot({ path: `${OUT}/08-summary.png` });
   await page.goto(base + "/");
   const stats = await page.getByTestId("stats").innerText({ timeout: 5000 });
   check("startsidan visar poäng och areal", /poäng/.test(stats) && /ha reservat/.test(stats), stats);

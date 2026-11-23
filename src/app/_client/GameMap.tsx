@@ -45,7 +45,8 @@ export interface GameMapProps {
   follow?: boolean;
   onUserMove?: () => void;
   /** Spelarens eget spår under promenaden. */
-  track?: LatLon[];
+  /** Spåret: gångna delar (heldragna) och ifyllda glapp (streckade raka linjer). */
+  track?: { solid: LatLon[][]; bridged: [LatLon, LatLon][] };
   /** Reservat som GeoJSON-ringar [lon, lat], med nivå (färgen blir varmare med nivån). */
   reserves?: [number, number][][][];
   reserveLevels?: number[];
@@ -128,6 +129,8 @@ export default function GameMap(props: GameMapProps) {
       map.addSource("track", { type: "geojson", data: fc() });
       // Spåret där man gått: ljus kant under och en tydlig orange linje, som på en friluftsapp.
       map.addLayer({ id: "walked-case", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 18, 9], "line-opacity": 0.9 } });
+      map.addSource("track-gaps", { type: "geojson", data: fc() });
+      map.addLayer({ id: "walked-gaps", type: "line", source: "track-gaps", layout: { "line-cap": "round" }, paint: { "line-color": "#e8611a", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2, 18, 4.5], "line-dasharray": [1, 1.6], "line-opacity": 0.8 } });
       map.addLayer({ id: "walked", type: "line", source: "track", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#e8611a", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2.2, 18, 5.5] } });
       setLoaded(true);
     });
@@ -151,11 +154,12 @@ export default function GameMap(props: GameMapProps) {
   const src = (id: string, data: GeoJSON.FeatureCollection) => (mapRef.current?.getSource(id) as GeoJSONSource | undefined)?.setData(data);
   const { player, accuracyM, follow, track, reserves, closure } = props;
 
-  // Spåret går ända fram till spelaren (den sparade spårpunkten kan ligga upp till några meter bakom).
+  // Spåret går ända fram till spelaren (den sparade spårpunkten kan ligga upp till några meter bakom). Ifyllda glapp ritas streckade.
   useEffect(() => {
     if (!loaded) return;
-    const pts = track && track.length ? (player ? [...track, player] : track) : [];
-    src("track", fc(pts.length > 1 ? [line(pts)] : []));
+    const parts = (track?.solid ?? []).map((p, i, all) => (i === all.length - 1 && player ? [...p, player] : p));
+    src("track", fc(parts.filter((p) => p.length > 1).map((p) => line(p))));
+    src("track-gaps", fc((track?.bridged ?? []).map(([a, b]) => line([a, b]))));
   }, [loaded, track, player]);
   const polys = (rs: [number, number][][][], levels?: number[]): GeoJSON.Feature[] => rs.map((rings, i) => ({ type: "Feature", properties: { level: levels?.[i] ?? 0 }, geometry: { type: "Polygon", coordinates: rings.map((r) => [...r, r[0]]) } }));
   useEffect(() => { if (loaded) src("reserves", fc(polys(reserves ?? [], props.reserveLevels))); }, [loaded, reserves, props.reserveLevels]);
