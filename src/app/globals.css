@@ -48,11 +48,8 @@ h1, h2, h3 { margin: 0; letter-spacing: 0.01em; }
 
 /* Karta */
 .mapshell { position: fixed; inset: 0; overflow: hidden; }
-/* Under kartan (t.ex. iOS-appens område vid hemindikatorn, där sidan inte ritar) har sidan samma färg som attributionsraden, så att
-   inget mörkt band syns. 100lvh används inte: i en installerad iOS-app är den högre än det synliga och knuffar ner knapparna. */
-html:has(.mapshell), html:has(.mapshell) body { background: #efe6d2; }
-/* Attributionsraden: 13 px text, och bara en del av iPhones hemindikatormarginal (texten får ligga strax ovanför indikatorn). */
-.mapshell { --attrib-h: 13px; --attrib-pad: max(2px, calc(var(--safe-bottom) - 20px)); --attrib-total: calc(var(--attrib-h) + var(--attrib-pad) + 2px); }
+/* Attributionsraden: en tunn rad (13 px text) längst ner, utan extra marginal för iPhones hemindikator (den gav för mycket luft). */
+.mapshell { --attrib-h: 13px; --attrib-pad: 1px; --attrib-total: calc(var(--attrib-h) + var(--attrib-pad) + 2px); }
 .mapshell .map-canvas { position: absolute; inset: 0 0 calc(var(--attrib-total)) 0; } /* specificitet över maplibregl-map (position: relative) */
 /* Attributionen ligger i en egen rad längst ner, under kartan, så att den aldrig skymmer något. */
 .attrib { position: absolute; left: 0; right: 0; bottom: 0; height: var(--attrib-total); padding: 2px 8px var(--attrib-pad); box-sizing: border-box; font-size: 9px; line-height: 13px; color: #6b6151; text-decoration: none; background: #efe6d2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; z-index: 3; }
