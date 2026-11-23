@@ -310,8 +310,6 @@ export const en: Record<MessageKey, string> = {
   "backup.error.newer_schema": `The file comes from a newer version of ${BRAND.prose.en}. Update the app first.`,
   "backup.error.invalid_data": "The file is damaged or altered and cannot be read.",
   "backup.error.missing_photo": "The file is missing photos and cannot be read.",
-  "backup.reminder": "You haven't exported your finds for a while. Make a backup in the settings.",
-  "backup.reminderAction": "Export",
 
   "spike.species": "Species (* = placeholder)",
   "spike.poseRest": "Resting",

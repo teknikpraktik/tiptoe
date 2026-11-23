@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ALL_SPECIES } from "@/engine/species";
 import { titleFor } from "@/engine/progress";
-import { Repo } from "@/storage/repo";
-import { exportReminder } from "@/storage/reminder";
 import { audio } from "./audio";
 import { mapCompass } from "./mapCompass";
 import { useLang, useT } from "./i18n";
@@ -35,19 +33,9 @@ export function Home() {
   const [picker, setPicker] = useState(false);
   const [howto, setHowto] = useState(false);
   const { setLang } = useLang();
-  const [remind, setRemind] = useState(false);
   const [bg, setBg] = useState<string | null>(null);
   // Bakgrund efter solens läge (mitt i Sverige; platsen är okänd på startsidan). Sätts efter hydreringen så att serverns HTML är densamma.
   useEffect(() => { setBg(homeBackground(Date.now())); }, []);
-  useEffect(() => {
-    const pid = v?.profile?.id, db = ctx?.db;
-    if (!pid || !db) return;
-    void (async () => {
-      const repo = new Repo(db);
-      const [walks, last] = await Promise.all([repo.walks(pid), repo.lastExport(pid)]);
-      setRemind(exportReminder(walks.filter((w) => w.endedAt !== null).map((w) => w.endedAt!), last, Date.now()));
-    })();
-  }, [ctx?.db, v?.profile?.id, v?.stage]);
   const canInstall = useSyncExternalStore(installPrompt.subscribe, installPrompt.available, () => false);
   useEffect(() => { setStandalone(isStandalone()); setIos(isIos()); }, []);
 
@@ -89,9 +77,6 @@ export function Home() {
         )}
         {v && v.storage === "ok" && (
           <p className="muted center" data-testid="stats"><b>{t(`title.${titleFor(v.score.species.length)}`)}</b> · {t("home.stats", { points: v.score.total, species: v.score.species.length, total: ALL_SPECIES.length, ha: (v.totalAreaM2 / 10_000).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) })}</p>
-        )}
-        {remind && !going && (
-          <div className="card" data-testid="export-reminder"><p className="warn-text">{t("backup.reminder")}</p><Link className="btn small" href="/settings">{t("backup.reminderAction")}</Link></div>
         )}
         <button className="btn primary" onClick={start} disabled={!ctx} data-testid="home-start">{going ? t("walk.resume") : t("home.startWalk")}</button>
         <Link className="btn ghost" href="/fieldbook" data-testid="home-fieldbook">{t("home.fieldbook")}</Link>

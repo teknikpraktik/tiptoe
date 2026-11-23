@@ -12,7 +12,7 @@ import { BRAND, asciiFileName } from "@/config/brand";
 
 const mb = (b?: number) => `${((b ?? 0) / 1e6).toFixed(1)} MB`;
 
-/** Säkerhetskopia (spec: Export och import; Lagring – varning om dataförlust, påminnelse om export, persist() och lagringsanvändning). */
+/** Säkerhetskopia (spec: Export och import; Lagring – varning om dataförlust, persist() och lagringsanvändning). */
 export function Backup() {
   const t = useT();
   const { setLang } = useLang();
