@@ -29,9 +29,15 @@ function circle(c: LatLon, rM: number): GeoJSON.Feature {
 
 /** Spelarens pil (pekar uppåt = färdriktningen) och en neutral prick när riktningen är okänd. */
 const ARROW_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#f4e9cf" stroke="#2b2f27" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+/** Ett djur på kartan: ett tassavtryck (färg efter sällsynthet via CSS), vridet åt djurets färdriktning. */
+const PAW_SVG = `<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><g class="paw" stroke="#fbf9f3" stroke-width="1.6"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="8.5" cy="11.5" rx="2.8" ry="3.6"/><ellipse cx="13.5" cy="7.5" rx="2.8" ry="3.8"/><ellipse cx="18.5" cy="7.5" rx="2.8" ry="3.8"/><ellipse cx="23.5" cy="11.5" rx="2.8" ry="3.6"/></g></svg>`;
+/** Tassavtryck som ett djur lämnar efter sig tonar bort på så här många sekunder, så att kartan inte blir rörig. */
+const PRINT_FADE_S = 40;
+/** Ett nytt avtryck för varje så här många meter djuret flyttar sig. */
+const PRINT_STEP_M = 6;
 const DOT_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7.5" fill="#f4e9cf" stroke="#2b2f27" stroke-width="3"/></svg>`;
 
-export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string; escape?: string; look?: string }
+export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string; escape?: string; look?: string; headingDeg?: number }
 
 export interface GameMapProps {
   player?: LatLon | null;
@@ -123,6 +129,8 @@ export default function GameMap(props: GameMapProps) {
       map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#b8860b", "#2f7a22"], "line-width": ["match", ["get", "level"], 3, 3, 2, 2.5, 2], "line-opacity": 0.85 } });
       map.addSource("closure", { type: "geojson", data: fc() });
       map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#e0a91b", "fill-opacity": 0 } });
+      map.addSource("animal-prints", { type: "geojson", data: fc() });
+      map.addLayer({ id: "animal-prints", type: "symbol", source: "animal-prints", layout: { "icon-image": PAW_IMAGE, "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.55, 18, 1], "icon-rotate": ["get", "r"], "icon-rotation-alignment": "map", "icon-offset": ["get", "off"], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": ["get", "o"] } });
       map.addSource("trails", { type: "geojson", data: fc() });
       // Djurspår: tassavtryck vridna längs spåret mot djuret, omväxlande vänster och höger fot.
       map.addLayer({ id: "trails", type: "symbol", source: "trails", layout: { "icon-image": PAW_IMAGE, "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.6, 18, 1.1], "icon-rotate": ["get", "r"], "icon-rotation-alignment": "map", "icon-offset": ["get", "off"], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": ["get", "o"] } });
@@ -207,7 +215,9 @@ export default function GameMap(props: GameMapProps) {
   }, [loaded, closure?.id]);
 
   // --- Djur: DOM-markörer; positionen glider mot motorns i bildrutesloopen nedan. ---
-  const animalMarkers = useRef(new Map<string, { m: Marker; el: HTMLDivElement; at: LatLon; target: LatLon }>());
+  const animalMarkers = useRef(new Map<string, { m: Marker; el: HTMLDivElement; at: LatLon; target: LatLon; lastPrint: LatLon }>());
+  /** Avtryck som djuren lämnat efter sig (tonar bort efter PRINT_FADE_S). */
+  const prints = useRef<{ lat: number; lon: number; r: number; t: number; i: number }[]>([]);
   useEffect(() => {
     const map = mapRef.current;
     if (!loaded || !map) return;
@@ -221,12 +231,13 @@ export default function GameMap(props: GameMapProps) {
         el.setAttribute("role", "button");
         el.setAttribute("data-testid", "animal");
         el.dataset.id = a.id;
-        el.innerHTML = `<span class="adot"></span>`;
+        el.innerHTML = `<span class="adot">${PAW_SVG}</span>`;
         el.addEventListener("click", (e) => { e.stopPropagation(); propsRef.current.onAnimalTap?.(a.id); });
-        x = { m: new Marker({ element: el }).setLngLat([a.lon, a.lat]).addTo(map), el, at: { lat: a.lat, lon: a.lon }, target: { lat: a.lat, lon: a.lon } };
+        x = { m: new Marker({ element: el, rotationAlignment: "map" }).setLngLat([a.lon, a.lat]).addTo(map), el, at: { lat: a.lat, lon: a.lon }, target: { lat: a.lat, lon: a.lon }, lastPrint: { lat: a.lat, lon: a.lon } };
         animalMarkers.current.set(a.id, x);
       }
       x.target = { lat: a.lat, lon: a.lon };
+      if (a.headingDeg != null) x.m.setRotation(a.headingDeg);
       x.el.dataset.state = a.state;
       x.el.dataset.rarity = a.rarity;
       x.el.dataset.escape = a.escape ?? "run";
@@ -275,6 +286,7 @@ export default function GameMap(props: GameMapProps) {
     if (!loaded) return;
     let raf = 0;
     let last = performance.now();
+    let lastPrintDraw = 0;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       if (document.hidden) { last = now; return; }
@@ -299,6 +311,17 @@ export default function GameMap(props: GameMapProps) {
         x.at.lat += (x.target.lat - x.at.lat) * k;
         x.at.lon += (x.target.lon - x.at.lon) * k;
         x.m.setLngLat([x.at.lon, x.at.lat]);
+        // Ett avtryck bakom djuret när det flyttat sig en bit: djuret syns som sitt eget spår, som tonar bort.
+        if (haversineM(x.lastPrint, x.at) >= PRINT_STEP_M) {
+          prints.current.push({ lat: x.lastPrint.lat, lon: x.lastPrint.lon, r: bearingDeg(x.lastPrint, x.at), t: now, i: prints.current.length });
+          x.lastPrint = { lat: x.at.lat, lon: x.at.lon };
+        }
+      }
+      if (now - lastPrintDraw > 250) {
+        lastPrintDraw = now;
+        prints.current = prints.current.filter((p) => now - p.t < PRINT_FADE_S * 1000);
+        const ps = map.getSource("animal-prints") as GeoJSONSource | undefined;
+        ps?.setData(fc(prints.current.map((p, k) => ({ type: "Feature", properties: { r: p.r, o: 0.85 * (1 - (now - p.t) / (PRINT_FADE_S * 1000)), off: [k % 2 ? 4 : -4, 0] }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }) as GeoJSON.Feature)));
       }
       const h = P.getHeading ? P.getHeading() : P.heading ?? null;
       let turned = false;
