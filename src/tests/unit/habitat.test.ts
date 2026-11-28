@@ -55,7 +55,8 @@ describe("vattendrag och säkerhetsavstånd till vatten", () => {
   });
   it("bäver och utter finns vid bäcken (12–100 m), och inga djur hamnar eller vandrar nära vatten", () => {
     let water = 0;
-    for (let w = 0; w < 24; w++) for (let x = -450; x <= 450; x += 250) for (let y = -450; y <= 450; y += 250) {
+    for (let w = 0; w < 12; w++) // 12 fönster × 6 individer per ruta = lika många som förut (24 × 3)
+    for (let x = -450; x <= 450; x += 250) for (let y = -450; y <= 450; y += 250) {
       const win = Math.floor(Date.UTC(2026, 5, 1) / WORLD.windowMs) + w;
       for (const c of candidates(cellOf(L(x, y)), win, env)) {
         expect(waterAt(env, c.home).distToWater(0, true), c.id).toBeGreaterThanOrEqual(WATER_CLEARANCE_M);
