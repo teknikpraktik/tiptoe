@@ -5,7 +5,7 @@ import { haversineM, type LatLon } from "@/geo/geometry";
 import { ENV_LAYERS, makeEnvironment, safeSpot } from "@/geo/environment";
 import { decodeFeatures } from "@/geo/mvt";
 import { checkPickPoint, type MapFeature } from "@/geo/point-check";
-import { WORLD } from "@/engine/config";
+import { BEHAVIOR, WORLD } from "@/engine/config";
 import { candidates, cellBounds, cellOf, cellsAround, idlePose, windowOf } from "@/engine/world";
 import { newEngineState, WorldEngine, type EngineEvent } from "@/engine/engine";
 import { simEnvironment, simFeatures, simPoint } from "@/sim/env";
@@ -177,11 +177,29 @@ describe("motorn: budget, upptäckt och flykt", () => {
     expect(r.can).toBe(true);
     expect(r.canWalking).toBe(false);
   });
-  it("ett flyende djur försvinner efter en kort sträcka", () => {
+  it("ett djur som springer iväg stannar första gången en kort bit bort, med flyktvägen som spår; andra gången försvinner det", () => {
     const r = approach("walk");
     let t = r.t;
-    for (let i = 0; i < 60; i++) { t += 1000; r.e.step({ tMs: t, pos: simPoint(500, -560), tempo: "still", posOk: true }); }
-    expect(r.e.s.active.find((a) => a.id === "test")).toBeUndefined();
+    const me = simPoint(500, -560);
+    for (let i = 0; i < 60; i++) { t += 1000; r.e.step({ tMs: t, pos: me, tempo: "still", posOk: true }); }
+    const a = r.e.s.active.find((x) => x.id === "test")!;
+    expect(a).toBeDefined();
+    expect(a.state).not.toBe("gone");
+    expect(a.flees).toBe(1);
+    const far = haversineM(a.pos, simPoint(500, -500));
+    expect(far).toBeGreaterThan(BEHAVIOR.fleeDistM[0] - 5);
+    expect(far).toBeLessThan(BEHAVIOR.fleeDistM[1] + 5);
+    expect(r.e.trails(me).some((x) => x.id === "test")).toBe(true);
+    // Spring rakt mot det igen: nu försvinner det.
+    let p = me;
+    for (let i = 0; i < 120 && r.e.s.active.find((x) => x.id === "test")?.state !== "gone" && r.e.s.active.some((x) => x.id === "test"); i++) {
+      t += 1000;
+      const v = r.e.s.active.find((x) => x.id === "test")!;
+      if (v.state !== "flee" && haversineM(p, v.pos) > 8) { const k = 2 / haversineM(p, v.pos); p = { lat: p.lat + (v.pos.lat - p.lat) * k, lon: p.lon + (v.pos.lon - p.lon) * k }; }
+      r.e.step({ tMs: t, pos: p, tempo: "run", posOk: true, tempoFromMotion: true });
+    }
+    const after = r.e.s.active.find((x) => x.id === "test");
+    expect(after === undefined || after.state === "gone").toBe(true);
   });
   it("tillståndet går att spara och återställa (JSON) utan att något ändras", () => {
     const e = new WorldEngine(newEngineState(T0), env);

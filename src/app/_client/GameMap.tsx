@@ -31,8 +31,8 @@ function circle(c: LatLon, rM: number): GeoJSON.Feature {
 const ARROW_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#f4e9cf" stroke="#2b2f27" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
 /** Ett djur på kartan: ett tassavtryck (färg efter sällsynthet via CSS), vridet åt djurets färdriktning. */
 const PAW_SVG = `<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><g class="paw" stroke="#fbf9f3" stroke-width="1.6"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="8.5" cy="11.5" rx="2.8" ry="3.6"/><ellipse cx="13.5" cy="7.5" rx="2.8" ry="3.8"/><ellipse cx="18.5" cy="7.5" rx="2.8" ry="3.8"/><ellipse cx="23.5" cy="11.5" rx="2.8" ry="3.6"/></g></svg>`;
-/** Tassavtryck som ett djur lämnar efter sig tonar bort på så här många sekunder, så att kartan inte blir rörig. */
-const PRINT_FADE_S = 40;
+/** Tassavtryck som ett djur lämnar efter sig tonar bort på så här många sekunder (3 min efter fälttest 1: lätt att följa, också för barn). */
+const PRINT_FADE_S = 180;
 /** Ett nytt avtryck för varje så här många meter djuret flyttar sig. */
 const PRINT_STEP_M = 6;
 const DOT_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7.5" fill="#f4e9cf" stroke="#2b2f27" stroke-width="3"/></svg>`;
@@ -125,10 +125,12 @@ export default function GameMap(props: GameMapProps) {
       map.addSource("acc", { type: "geojson", data: fc() });
       map.addLayer({ id: "acc", type: "fill", source: "acc", paint: { "fill-color": "#2f7fd8", "fill-opacity": 0.1 } });
       map.addSource("reserves", { type: "geojson", data: fc() });
-      map.addLayer({ id: "reserves", type: "fill", source: "reserves", paint: { "fill-color": ["match", ["get", "level"], 3, "#e0a91b", 2, "#4f9a2e", 1, "#5fae3a", "#6dbb46"], "fill-opacity": ["match", ["get", "level"], 3, 0.28, 2, 0.26, 1, 0.22, 0.18] } });
-      map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#b8860b", "#2f7a22"], "line-width": ["match", ["get", "level"], 3, 3, 2, 2.5, 2], "line-opacity": 0.85 } });
+      // Reservatet: ett ljust, klargrönt genomskinligt lager som syns tydligt också över skogens grönt (fälttest 1), med ljus kant.
+      map.addLayer({ id: "reserves", type: "fill", source: "reserves", paint: { "fill-color": ["match", ["get", "level"], 3, "#ffd84a", 2, "#8fe85a", 1, "#a6f06c", "#b4f57c"], "fill-opacity": 0.5 } });
+      map.addLayer({ id: "reserves-glow", type: "line", source: "reserves", paint: { "line-color": "#f3ffe6", "line-width": 6, "line-opacity": 0.8 } });
+      map.addLayer({ id: "reserves-edge", type: "line", source: "reserves", paint: { "line-color": ["match", ["get", "level"], 3, "#b8860b", "#2e9a1e"], "line-width": ["match", ["get", "level"], 3, 3, 2, 3, 2.5], "line-opacity": 0.95 } });
       map.addSource("closure", { type: "geojson", data: fc() });
-      map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#e0a91b", "fill-opacity": 0 } });
+      map.addLayer({ id: "closure", type: "fill", source: "closure", paint: { "fill-color": "#d9ffb8", "fill-opacity": 0 } });
       map.addSource("animal-prints", { type: "geojson", data: fc() });
       map.addLayer({ id: "animal-prints", type: "symbol", source: "animal-prints", layout: { "icon-image": PAW_IMAGE, "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.55, 18, 1], "icon-rotate": ["get", "r"], "icon-rotation-alignment": "map", "icon-offset": ["get", "off"], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": ["get", "o"] } });
       map.addSource("trails", { type: "geojson", data: fc() });
@@ -197,7 +199,7 @@ export default function GameMap(props: GameMapProps) {
       sightingMarkers.current.set(x.id, new Marker({ element: el }).setLngLat([x.lon, x.lat]).addTo(map));
     }
   }, [loaded, props.sightings]);
-  // Ytan växer fram: en gul fyllning som tonar in och sedan ut över reservatet (spec: Direkt återkoppling).
+  // Ytan växer fram: en ljust grön fyllning som lyser upp två gånger över det nya reservatet (spec: Direkt återkoppling).
   useEffect(() => {
     const map = mapRef.current;
     if (!loaded || !map || !closure) return;
@@ -205,9 +207,9 @@ export default function GameMap(props: GameMapProps) {
     let raf = 0;
     const t0 = performance.now();
     const anim = (now: number) => {
-      const k = (now - t0) / 2600;
+      const k = (now - t0) / 3200;
       if (k >= 1) { map.setPaintProperty("closure", "fill-opacity", 0); return; }
-      map.setPaintProperty("closure", "fill-opacity", Math.sin(Math.min(1, k) * Math.PI) * 0.55);
+      map.setPaintProperty("closure", "fill-opacity", Math.abs(Math.sin(Math.min(1, k) * 2 * Math.PI)) * 0.7);
       raf = requestAnimationFrame(anim);
     };
     raf = requestAnimationFrame(anim);

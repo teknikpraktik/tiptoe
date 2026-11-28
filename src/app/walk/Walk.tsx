@@ -237,6 +237,7 @@ export function Walk() {
             <div><b>{fmtHa(summary.addedM2)} ha</b><span>{t("summary.area")}</span></div>
             <div><b>{summary.points}</b><span>{t("summary.points")}</span></div>
           </div>
+          {summary.addedM2 <= 0 && summary.distanceM >= 200 && <p data-testid="summary-no-reserve">{t("summary.noReserve")}</p>}
         </Modal>
       )}
       {confirmEnd && (
