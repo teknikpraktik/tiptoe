@@ -23,6 +23,7 @@ import { CHUNK_POINTS, type Observation, type Profile, type Repo, type WalkMeta 
 import { FieldLog, loadLog } from "./fieldlog";
 import { titleFor, type TitleId } from "@/engine/progress";
 import { SoundDirector, ambienceFor, type Ambience, type SoundCue } from "@/audio/director";
+import { dayPhase } from "@/engine/sun";
 
 export interface MotionSource {
   /** iOS kräver en användargest: anropas från klicket som startar promenaden. */
@@ -142,7 +143,7 @@ export class WalkSession {
   private sound = new SoundDirector();
   private ambience: Ambience = "none";
   private setAmbience(a: Ambience) { if (a !== this.ambience) { this.ambience = a; this.d.onAmbience?.(a); } }
-  private playSound(c: SoundCue) { this.d.onSound?.(c); this.log("sound", { kind: c.kind, pan: Math.round(c.pan * 100) / 100, gain: Math.round(c.gain * 100) / 100 }); }
+  private playSound(c: SoundCue) { this.d.onSound?.(c); this.log("sound", { kind: c.kind, ...(c.sample ? { sample: c.sample } : {}), pan: Math.round(c.pan * 100) / 100, gain: Math.round(c.gain * 100) / 100 }); }
   private residents: Resident[] = [];
   /** Spårets delar för vyn (lista, karta och senaste aktivitet). */
   private trackView(): Pick<WalkView, "track" | "trackMap" | "lastActiveAtMs"> {
@@ -426,7 +427,8 @@ export class WalkSession {
     if (pos && this.env) this.maybeObservation(pos, tMs);
     if (this.d.onSound || this.d.onAmbience) {
       const heard = this.engine.s.active.map((a) => ({ id: a.id, species: a.species, pos: a.pos, gone: a.state === "gone" }));
-      for (const c of this.sound.update({ tMs, player: pos, headingDeg: this.heading.heading, animals: heard, events })) this.playSound(c);
+      const night = pos ? dayPhase(tMs, pos.lat, pos.lon) === "night" : false;
+      for (const c of this.sound.update({ tMs, player: pos, headingDeg: this.heading.heading, animals: heard, events, ambience: this.ambience, night })) this.playSound(c);
       if (pos && this.env) this.setAmbience(ambienceFor(this.env.habitat(pos), this.env.waterDistM(pos, 61, 2000)));
     }
     const inRes = pos ? this.engine.levels.reserveAt(pos) : null;
