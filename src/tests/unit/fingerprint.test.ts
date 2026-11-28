@@ -14,11 +14,11 @@ describe("världens fingeravtryck", () => {
   });
 });
 
-describe("balans (fas 1-mål)", () => {
-  it("blandad miljö: ett möte per 5–10 minuter", () => {
+describe("balans", () => {
+  it("blandad miljö: ett möte per 2,5–6 minuter (tätare efter fälttest 1)", () => {
     const r = simulateWalk("mixed", { minutes: 45 });
-    expect(r.minPerEncounter).toBeGreaterThanOrEqual(5);
-    expect(r.minPerEncounter).toBeLessThanOrEqual(10);
+    expect(r.minPerEncounter).toBeGreaterThanOrEqual(2.5);
+    expect(r.minPerEncounter).toBeLessThanOrEqual(6);
   });
   it("natur oftare än bebyggelse", () => {
     expect(simulateWalk("nature", { minutes: 40 }).minPerEncounter).toBeLessThan(simulateWalk("urban", { minutes: 40 }).minPerEncounter);

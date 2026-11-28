@@ -6,7 +6,9 @@ import { multiArea, polyArea, ringArea, type MultiPoly, type Poly, type PolygonO
  *
  * 1. Spåret delas i sammanhängande delar: dåliga fixar bort, enstaka GPS-hopp bort, glapp under 50 m (och tidsmässigt rimliga) och avbrott upp till 300 m i gångfart överbryggas,
  *    längre glapp och för hög fart bryter spåret.
- * 2. Varje del förenklas (Douglas–Peucker) och buffras med halva slutningstoleransen till en korridor.
+ * 2. Varje del förenklas (Douglas–Peucker) och buffras med halva slutningstoleransen till en korridor. Slutar (eller börjar) en del inom
+ *    `snapM` från en tidigare del av spåret (minst `snapMinTrackM` bort längs spåret), binds de ihop med en rak linje: en slinga som går
+ *    tillbaka nästan till starten sluts även om GPS:en lagt start och slut en bit isär (fälttest 1).
  * 3. Korridoren slås ihop med spelarens befintliga reservat. Varje inre hål som korridoren gränsar till och som är minst 0,1 ha är innesluten yta.
  * 4. Hålet plus den del av korridoren som ligger runt det (hålet buffrat tillbaka med samma avstånd ≈ ytan innanför den gångna linjen) blir ny
  *    reservatsyta, inom taket per promenad.
@@ -34,6 +36,10 @@ export interface ReserveOptions {
   /** Utjämning längs spåret (m åt varje håll) före förenklingen: punktvis GPS-brus gör annars korridoren taggig och hålet för litet. */
   smoothM: number;
   minNewAreaM2: number;
+  /** Spårets ändpunkter binds ihop med en tidigare punkt inom så här många meter (förlåtande slutning; under spec-gränsen 80 m). */
+  snapM: number;
+  /** ... om punkten ligger minst så här långt bort längs spåret (så att en vanlig kurva inte räknas som slinga). */
+  snapMinTrackM: number;
   /** Glapp mellan två spårpunkter som överbryggas (m, s). */
   bridgeGapM: number;
   bridgeGapS: number;
@@ -60,9 +66,11 @@ export const DEFAULT_RESERVE_OPTIONS: ReserveOptions = {
   simplifyM: 5,
   smoothM: 10,
   minNewAreaM2: 1000,
+  snapM: 50,
+  snapMinTrackM: 120,
   bridgeGapM: 50,
   bridgeGapS: 120,
-  longGapM: 300,
+  longGapM: 800,
   longGapS: 3600,
   longGapMps: 9 / 3.6,
   maxSpeedMps: 12 / 3.6,
@@ -210,6 +218,30 @@ export function simplify(pts: Pt[], tol: number): Pt[] {
 
 // ---------- 2–5. Buffra och fyll ----------
 
+/**
+ * Förlåtande slutning: för varje dels start- och slutpunkt, närmaste punkt i spåret inom `snapM` som ligger minst `minTrackM` bort längs
+ * spåret (i en annan del räknas allt). Ger raka länkar som buffras som spåret. Gå ut och tillbaka samma väg ger en länk utan yta.
+ */
+export function closingLinks(runs: Pt[][], snapM: number, minTrackM: number): Pt[][] {
+  if (snapM <= 0) return [];
+  const cum = runs.map((run) => { const c = [0]; for (let i = 1; i < run.length; i++) c.push(c[i - 1] + Math.hypot(run[i].x - run[i - 1].x, run[i].y - run[i - 1].y)); return c; });
+  const links: Pt[][] = [];
+  runs.forEach((run, ri) => {
+    for (const ei of run.length > 1 ? [0, run.length - 1] : [0]) {
+      const e = run[ei];
+      let best: { p: Pt; d: number } | null = null;
+      runs.forEach((other, oi) => other.forEach((p, pi) => {
+        if (oi === ri && Math.abs(cum[ri][pi] - cum[ri][ei]) < minTrackM) return;
+        const d = Math.hypot(p.x - e.x, p.y - e.y);
+        if (d <= snapM && (!best || d < best.d)) best = { p, d };
+      }));
+      const b = best as { p: Pt; d: number } | null;
+      if (b && b.d > 1) links.push([{ x: e.x, y: e.y }, { x: b.p.x, y: b.p.y }]);
+    }
+  });
+  return links;
+}
+
 const ll = (origin: LatLon, r: Pt[]): [number, number][] => r.map((p) => { const q = fromLocal(origin, p); return [q.lon, q.lat]; });
 const local = (origin: LatLon, r: [number, number][]): Pt[] => r.map(([lon, lat]) => toLocal(origin, { lat, lon }));
 const reservePoly = (origin: LatLon, r: Reserve): Poly => ({ outer: local(origin, r.rings[0]), holes: r.rings.slice(1).map((h) => local(origin, h)) });
@@ -231,7 +263,7 @@ export function computeReserves(ops: PolygonOps, input: ReserveInput): ReserveRe
   if (!runs.length) return empty(breaks);
   const lines = runs.map((r) => simplify(smooth(r, o.smoothM), o.simplifyM));
   const r = o.halfToleranceM;
-  const corridor = ops.bufferLines(lines, r);
+  const corridor = ops.bufferLines([...lines, ...closingLinks(runs, o.snapM, o.snapMinTrackM)], r);
   const existing: MultiPoly = input.existing.map((x) => reservePoly(origin, x));
   const existingAll = existing.length ? ops.union(existing, []) : [];
   const existingArea = multiArea(existingAll);

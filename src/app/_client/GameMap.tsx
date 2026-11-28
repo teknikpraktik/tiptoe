@@ -31,8 +31,8 @@ function circle(c: LatLon, rM: number): GeoJSON.Feature {
 const ARROW_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#f4e9cf" stroke="#2b2f27" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
 /** Ett djur på kartan: ett tassavtryck (färg efter sällsynthet via CSS), vridet åt djurets färdriktning. */
 const PAW_SVG = `<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><g class="paw" stroke="#fbf9f3" stroke-width="1.6"><ellipse cx="16" cy="21" rx="7" ry="6"/><ellipse cx="8.5" cy="11.5" rx="2.8" ry="3.6"/><ellipse cx="13.5" cy="7.5" rx="2.8" ry="3.8"/><ellipse cx="18.5" cy="7.5" rx="2.8" ry="3.8"/><ellipse cx="23.5" cy="11.5" rx="2.8" ry="3.6"/></g></svg>`;
-/** Tassavtryck som ett djur lämnar efter sig tonar bort på så här många sekunder, så att kartan inte blir rörig. */
-const PRINT_FADE_S = 40;
+/** Tassavtryck som ett djur lämnar efter sig tonar bort på så här många sekunder (3 min efter fälttest 1: lätt att följa, också för barn). */
+const PRINT_FADE_S = 180;
 /** Ett nytt avtryck för varje så här många meter djuret flyttar sig. */
 const PRINT_STEP_M = 6;
 const DOT_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7.5" fill="#f4e9cf" stroke="#2b2f27" stroke-width="3"/></svg>`;

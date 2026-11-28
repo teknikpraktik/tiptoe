@@ -38,15 +38,17 @@ export interface Animal {
   /** Störd: följer inte längre den delade tomgångsbanan. */
   disturbed: boolean;
   appearedAtMs: number;
-  flee?: { target: LatLon; leftM: number; kind: "run" | "dive" | "fly"; untilMs?: number };
+  flee?: { target: LatLon; leftM: number; kind: "run" | "dive" | "fly"; untilMs?: number; from?: LatLon };
   goneAtMs?: number;
   goneReason?: GoneReason;
   /** Frys-momentet: förvarning (warn) eller blick (look) till `untilMs`; nästa blick tidigast `nextMs`. */
   look?: { phase: "warn" | "look"; untilMs: number };
   nextLookMs?: number;
   looks?: number;
-  /** Spår som leder mot djuret från spelarens håll (spec: spår på kartan). */
+  /** Spår som leder mot djuret från spelarens håll (spec: spår på kartan), eller flyktvägen efter en flykt. */
   trail?: LatLon[];
+  /** Antal flykter hittills (se BEHAVIOR.fleesBeforeGone). */
+  flees?: number;
 }
 
 export interface EngineState {
@@ -68,6 +70,8 @@ export type EngineEvent =
   | { type: "appear"; id: string; species: SpeciesId; distM: number; habitat: Habitat; tMs: number; via: AppearVia }
   | { type: "alert"; id: string; tMs: number }
   | { type: "calm"; id: string; tMs: number }
+  /** Djuret slutade fly och stannade (vaksamt) en bit bort. */
+  | { type: "halt"; id: string; tMs: number }
   | { type: "look_warn"; id: string; tMs: number }
   | { type: "look"; id: string; tMs: number }
   | { type: "look_end"; id: string; tMs: number }
@@ -86,7 +90,7 @@ export interface StepInput {
 }
 
 export function newEngineState(tMs: number): EngineState {
-  return { version: 1, tMs, budget: 0.6, lastPos: null, metersWalked: 0, active: [], used: {}, encounters: 0 };
+  return { version: 1, tMs, budget: SPAWN.startBudget, lastPos: null, metersWalked: 0, active: [], used: {}, encounters: 0 };
 }
 
 const NATURE: Habitat[] = ["forest", "wetland", "park", "grass", "field"];
@@ -134,7 +138,8 @@ export class WorldEngine {
       const d = haversineM(this.s.lastPos, input.pos);
       if (d >= SPAWN.budgetStepM) {
         const dt = Math.max(0.001, (input.tMs - (this.s.lastPosMs ?? input.tMs)) / 1000);
-        if (input.tempo !== "still" && d / dt <= SPAWN.maxBudgetSpeedMps && d < 200) {
+        const moving = input.tempo !== "still" || d / dt >= SPAWN.minBudgetSpeedMps;
+        if (moving && d / dt <= SPAWN.maxBudgetSpeedMps && d < 200) {
           this.s.metersWalked += d;
           this.s.budget = Math.min(SPAWN.maxBudget, this.s.budget + d / metersPerEncounter(this.env.habitat(input.pos)));
         }
@@ -316,7 +321,7 @@ export class WorldEngine {
   trails(player: LatLon | null): { id: string; points: LatLon[] }[] {
     if (!player) return [];
     return this.s.active.filter((a) => a.state !== "gone" && a.state !== "flee" && a.trail?.length).map((a) => ({ a, d: haversineM(a.pos, player) }))
-      .filter((x) => x.d > BEHAVIOR.visibleM && x.d <= BEHAVIOR.trailM).map((x) => ({ id: x.a.id, points: x.a.trail! }));
+      .filter((x) => x.d <= BEHAVIOR.trailM).map((x) => ({ id: x.a.id, points: x.a.trail! }));
   }
 
   private startFlee(a: Animal, player: LatLon, t: number, tempo: Tempo, d: number, ev: EngineEvent[]): void {
@@ -358,23 +363,41 @@ export class WorldEngine {
       const score = Math.cos((offDeg * Math.PI) / 180) + (this.env.forestWithin(p, 15) ? 0.6 : 0) + rand(r) * 0.1;
       if (!best || score > best.score) best = { p, score };
     }
-    a.flee = { target: best?.p ?? a.pos, leftM: best ? dist : 0, kind: "run" };
+    a.flee = { target: best?.p ?? a.pos, leftM: best ? dist : 0, kind: "run", from: a.pos };
+  }
+
+  /** Slutet på en springande flykt: djuret stannar vaksamt (och lämnar flyktvägen som spår) om det har flykter kvar, annars försvinner det. */
+  private endRun(a: Animal, t: number, ev: EngineEvent[]): void {
+    a.flees = (a.flees ?? 0) + 1;
+    if (a.flees >= BEHAVIOR.fleesBeforeGone || a.flee?.kind !== "run") { this.gone(a, t, "fled", ev); return; }
+    const from = a.flee.from;
+    a.flee = undefined;
+    a.state = "alert";
+    a.alarm = BEHAVIOR.alertAt;
+    a.nextLookMs = undefined;
+    if (from) {
+      const v = toLocal(from, a.pos), len = Math.hypot(v.x, v.y), pts: LatLon[] = [];
+      for (let m = 0; m <= len - 6; m += 8) pts.push(fromLocal(from, { x: (v.x / len) * m, y: (v.y / len) * m }));
+      if (pts.length) a.trail = pts;
+    }
+    ev.push({ type: "halt", id: a.id, tMs: t });
   }
 
   private fleeStep(a: Animal, dt: number, t: number, ev: EngineEvent[]): void {
     const f = a.flee;
     if (f?.kind === "fly") { if (t >= (f.untilMs ?? t)) this.gone(a, t, "flew", ev); return; }
     const reason: GoneReason = f?.kind === "dive" ? "dove" : "fled";
+    if (f?.kind === "run" && f.leftM <= 0) { this.endRun(a, t, ev); return; }
     if (!f || f.leftM <= 0) { this.gone(a, t, reason, ev); return; }
     const sp = SPECIES[a.species];
     if (f.kind === "dive" && this.env.waterDistM(a.pos, WATER_ZONE.minM + 1, sp.needs?.waterAreaM2 ?? WATER_ZONE.defaultAreaM2, sp.needs?.streams) <= WATER_ZONE.minM + 1) { this.gone(a, t, "dove", ev); return; }
     const v = toLocal(a.pos, f.target);
     const len = Math.hypot(v.x, v.y);
     const step = Math.min(len, sp.fleeMps * dt);
-    if (len < 0.5) { this.gone(a, t, reason, ev); return; }
+    if (len < 0.5) { if (f.kind === "run") this.endRun(a, t, ev); else this.gone(a, t, reason, ev); return; }
     const next = fromLocal(a.pos, { x: (v.x / len) * step, y: (v.y / len) * step });
     // Aldrig in i byggnad, vatten eller över större väg: hellre försvinna (in i buskarna) än att springa dit.
-    if (this.env.segmentBlocked(a.pos, next) || this.env.hazard(next)) { this.gone(a, t, reason, ev); return; }
+    if (this.env.segmentBlocked(a.pos, next) || this.env.hazard(next)) { if (f.kind === "run") this.endRun(a, t, ev); else this.gone(a, t, reason, ev); return; }
     a.headingDeg = ((Math.atan2(v.x, v.y) * 180) / Math.PI + 360) % 360;
     a.pos = next;
     f.leftM -= step;

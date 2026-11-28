@@ -7,8 +7,8 @@ export const WORLD = {
   key: "tiptoe-world-v1",
   cellM: 250,
   windowMs: 2 * 60 * 60 * 1000,
-  /** Möjliga individer per ruta och tidsfönster (taket per ruta och fönster). */
-  candidatesPerCell: 3,
+  /** Möjliga individer per ruta och tidsfönster (taket per ruta och fönster). Höjt från 3 efter fälttest 1: områden tog slut på djur. */
+  candidatesPerCell: 6,
   /** Extra möjliga individer per ruta och fönster inom profilens reservatszoner (reservatsdjur). */
   reserveCandidatesPerCell: 3,
   /** Försök per individ att hitta en säker plats i rutan. */
@@ -16,10 +16,15 @@ export const WORLD = {
 } as const;
 
 export const SPAWN = {
-  /** Meter gångna per möte (spec: natur 4–7 min, bebyggelse 8–12 min vid ~1,3 m/s). Budgeten växer med 1/meter. */
-  metersPerEncounter: { nature: 420, mixed: 560, urban: 780 },
+  /**
+   * Meter gångna per möte. Budgeten växer med 1/meter. Fälttest 1 (barn): för få djur, så ungefär dubbelt så tätt som specens startvärden
+   * (natur ~3 min, bebyggelse ~6 min vid ~1,3 m/s).
+   */
+  metersPerEncounter: { nature: 230, mixed: 300, urban: 430 },
+  /** Budget vid promenadens start: första djuret kommer efter en kort bit. */
+  startBudget: 0.8,
   /** Budgeten sparas inte obegränsat (inga skurar efter en lång sträcka utan djur). */
-  maxBudget: 1.5,
+  maxBudget: 2,
   /** Minsta avstånd från spelaren när ett djur dyker upp, och största (så att det går att hitta). */
   minDistM: 60,
   maxDistM: 220,
@@ -35,31 +40,38 @@ export const SPAWN = {
   budgetStepM: 8,
   /** Gräns för fart (m/s) när sträckan räknas: snabbare (cykel, bil) ger ingen budget. */
   maxBudgetSpeedMps: 3.5,
+  /** Sträckan räknas också när stegräknaren säger stilla men GPS-farten är minst så här (stegräknaren missar steg när telefonen hålls stilla). */
+  minBudgetSpeedMps: 0.5,
 } as const;
 
 export const BEHAVIOR = {
   /** Fast tidssteg (s). */
   stepS: 0.5,
-  /** Hur fort oron växer (per s) vid närhet 1 och gångtempo, innan artens flyktbenägenhet. */
-  alarmRate: 0.3,
-  alarmDecay: 0.08,
+  /** Hur fort oron växer (per s) vid närhet 1 och gångtempo, innan artens flyktbenägenhet. Sänkt efter fälttest 1 (lättare för barn). */
+  alarmRate: 0.18,
+  alarmDecay: 0.12,
   /** Oro över detta = vaksam; 1 = flyr. */
   alertAt: 0.3,
   /** Tempovikt för hur mycket rörelse oroar. Stillastående oroar knappt (spec: Frys!). */
-  tempoAlarm: { still: 0.05, sneak: 0.35, walk: 1, run: 2.5 },
-  /** Flykt: sträcka (m) innan djuret försvinner (spec: flyende djur försvinner i stället för att springa långt). */
-  fleeDistM: [60, 110] as [number, number],
+  tempoAlarm: { still: 0.03, sneak: 0.2, walk: 0.7, run: 2 },
+  /** Flykt: sträcka (m) som djuret springer (spec: flyende djur springer inte långt). */
+  fleeDistM: [40, 80] as [number, number],
+  /**
+   * Så många gånger kan ett djur som springer (inte dyker eller flyger) fly. Före den sista stannar det efter flykten och går att smyga ikapp
+   * (fälttest 1: djuren försvann när man gick mot dem); den sista gången försvinner det.
+   */
+  fleesBeforeGone: 2,
   /** Tomgång: längd på ett moment (s) och hur långt en vandring går (m). */
   idleLegS: [15, 60] as [number, number],
   wanderM: [5, 25] as [number, number],
   /** Hur långt bort (m) ett djur syns på kartan. Längre bort syns bara spåren (spec: Hör och upptäck – spår kan leda mot ett djur). */
-  visibleM: 130,
-  /** Spåren syns inom detta avstånd till djuret. */
-  trailM: 260,
+  visibleM: 180,
+  /** Spåren syns inom detta avstånd till djuret, också när djuret syns (så att de inte försvinner när man går mot det). */
+  trailM: 350,
   /** Frys-moment (spec: artspecifikt, 1–3 s blick, med förvarning). Förvarningen är lång nog för att stegräknaren ska hinna se att man stannat. */
   freeze: {
-    warnMs: 2000,
-    everyS: { common: [14, 30], uncommon: [11, 24], rare: [8, 18], very_rare: [8, 16] } as Record<string, [number, number]>,
+    warnMs: 3000,
+    everyS: { common: [20, 40], uncommon: [16, 32], rare: [12, 24], very_rare: [10, 20] } as Record<string, [number, number]>,
     lookS: { common: [1, 2], uncommon: [1.5, 2.5], rare: [2, 3], very_rare: [2, 3] } as Record<string, [number, number]>,
     /** Djuret bryr sig bara om spelaren inom upptäcktsradien (gångtempo) × detta. */
     awareFactor: 1.4,

@@ -32,6 +32,19 @@ for (const ops of LIBS) describe(`reservatsgeometri (${ops.name})`, () => {
     for (const g of [10, 20, 30]) expect(run(ops, walk(rect(0, 0, 150, 150, g))).created, `glapp ${g}`).toHaveLength(1);
     for (const g of [80, 100]) expect(run(ops, walk(rect(0, 0, 150, 150, g))).created, `glapp ${g}`).toHaveLength(0);
   });
+  it("förlåtande slutning (fälttest 1): tillbaka inom 50 m från starten, åt vilket håll som helst, räcker", () => {
+    for (const g of [40, 48]) {
+      const r = run(ops, walk(rect(0, 0, 150, 150, g)));
+      expect(r.created, `glapp ${g}`).toHaveLength(1);
+      expect(r.addedM2 / 22_500, `glapp ${g}`).toBeGreaterThan(0.85);
+    }
+    // Slutet hamnar 45 m vid sidan av starten (GPS:en lade starten fel): sluts ändå.
+    const side = run(ops, walk([[0, 0], [0, 150], [150, 150], [150, 0], [10, 0], [10, -44]]));
+    expect(side.created).toHaveLength(1);
+    // En vanlig kurva eller en utstickare ger ingen yta.
+    expect(run(ops, walk([[0, 0], [0, 100], [40, 100]])).created).toHaveLength(0);
+    expect(run(ops, walk([[0, 0], [0, 200], [30, 200], [30, 0]])).addedM2).toBeLessThan(200 * 30 * 1.6);
+  });
   it("ett glapp i gångfart överbryggas (som när man pratar i telefon och går vidare); i bilfart bryts spåret", () => {
     const loop = walk(rect(0, 0, 150, 150));
     // Ta bort punkter så att det blir ett hål i spåret mitt på en sida. Tiden går som om man gått sträckan.
@@ -158,7 +171,7 @@ for (const ops of LIBS) describe(`reservatsgeometri (${ops.name})`, () => {
   it("standardvärdena följer specen", () => {
     expect(DEFAULT_RESERVE_OPTIONS.minNewAreaM2).toBe(1000);
     expect(DEFAULT_RESERVE_OPTIONS.bridgeGapM).toBe(50);
-    expect([DEFAULT_RESERVE_OPTIONS.longGapM, DEFAULT_RESERVE_OPTIONS.longGapS, Math.round(DEFAULT_RESERVE_OPTIONS.longGapMps * 3.6)]).toEqual([300, 3600, 9]);
+    expect([DEFAULT_RESERVE_OPTIONS.longGapM, DEFAULT_RESERVE_OPTIONS.longGapS, Math.round(DEFAULT_RESERVE_OPTIONS.longGapMps * 3.6)]).toEqual([800, 3600, 9]);
     expect(ha(DEFAULT_RESERVE_OPTIONS.maxNewAreaPerWalkM2)).toBe(50);
     expect(DEFAULT_RESERVE_OPTIONS.maxAccuracyM).toBe(30);
     expect(DEFAULT_RESERVE_OPTIONS.halfToleranceM).toBeGreaterThanOrEqual(15);
