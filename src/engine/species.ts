@@ -1,4 +1,5 @@
 import { WATER_CLEARANCE_M, type Habitat } from "@/geo/environment";
+import { EASE } from "./config";
 
 /**
  * Artdata (spec: Djur och spelvärld → Arter, startvärden). Alla värden är konfigurerbara startvärden som justeras efter fälttest.
@@ -64,7 +65,8 @@ export const WATER_ZONE = { minM: WATER_CLEARANCE_M, maxM: 100, defaultAreaM2: 5
 
 const L = { common: 1500, uncommon: 2400, rare: 3600, very_rare: 3600 };
 
-export const SPECIES: Record<SpeciesId, Species> = {
+/** Artdatan före lätthetsnivån (`EASE`): specens startvärden. */
+export const BASE_SPECIES: Record<SpeciesId, Species> = {
   squirrel: {
     id: "squirrel", rarity: "common", points: 50, escape: "run",
     habitat: { forest: 1, park: 1, urban: 0.5, grass: 0.2, field: 0.05, wetland: 0.2, open: 0.3 },
@@ -178,6 +180,12 @@ export const SPECIES: Record<SpeciesId, Species> = {
     variants: [{ id: "white", chance: 0.03 }],
   },
 };
+
+/** Artdatan i spelet: fotoavstånd och upptäcktsradie justerade per klass (`EASE`; oron i motorn). */
+export const SPECIES: Record<SpeciesId, Species> = Object.fromEntries(Object.entries(BASE_SPECIES).map(([id, s]) => {
+  const e = EASE[s.rarity];
+  return [id, { ...s, photoM: Math.round(s.photoM * e.photo), detectionM: Math.round(s.detectionM * e.detection) }];
+})) as Record<SpeciesId, Species>;
 
 export const ALL_SPECIES = Object.keys(SPECIES) as SpeciesId[];
 

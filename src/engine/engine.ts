@@ -3,7 +3,7 @@
 import { fromLocal, haversineM, toLocal, type LatLon } from "@/geo/geometry";
 import { safeSpot, type Environment, type Habitat } from "@/geo/environment";
 import { rand } from "./core/rng";
-import { BEHAVIOR, SPAWN } from "./config";
+import { BEHAVIOR, EASE, SPAWN } from "./config";
 import { hash32 } from "./hash";
 import { SPECIES, TEMPO_FACTOR, WATER_ZONE, type SpeciesId, type Tempo } from "./species";
 import { candidates, cellsAround, idlePose, reserveCandidates, residentCandidate, windowOf, type Candidate, type Cell, type Resident } from "./world";
@@ -47,7 +47,7 @@ export interface Animal {
   looks?: number;
   /** Spår som leder mot djuret från spelarens håll (spec: spår på kartan), eller flyktvägen efter en flykt. */
   trail?: LatLon[];
-  /** Antal flykter hittills (se BEHAVIOR.fleesBeforeGone). */
+  /** Antal flykter hittills (se EASE[klass].flees). */
   flees?: number;
 }
 
@@ -247,11 +247,15 @@ export class WorldEngine {
       if (a.state === "flee") { this.fleeStep(a, dt, t, ev); continue; }
       // Oro: växer med närhet och spelarens tempo, avtar annars. GPS-brus påverkar inte tempot (det kommer från rörelsesensorn).
       const R = sp.detectionM * TEMPO_FACTOR[input.tempo];
-      if (player && input.posOk && d < R) a.alarm += BEHAVIOR.alarmRate * (1 - d / R) * BEHAVIOR.tempoAlarm[input.tempo] * (0.5 + sp.skittish) * dt;
+      if (player && input.posOk && d < R) a.alarm += BEHAVIOR.alarmRate * (1 - d / R) * BEHAVIOR.tempoAlarm[input.tempo] * (0.5 + sp.skittish) * EASE[sp.rarity].alarm * dt;
       else a.alarm = Math.max(0, a.alarm - BEHAVIOR.alarmDecay * dt);
       if (a.alarm >= 1 && player) { this.startFlee(a, player, t, input.tempo, d, ev); continue; }
-      // Frys-momentet: rör sig spelaren medan djuret tittar, flyr det.
-      if (player && input.posOk && this.freeze(a, t, d, input, ev)) { this.startFlee(a, player, t, input.tempo, d, ev); continue; }
+      // Frys-momentet: rör sig spelaren medan djuret tittar blir det oroligt; sällsynta djur flyr direkt, vanliga tål en del (EASE).
+      if (player && input.posOk && this.freeze(a, t, d, input, ev)) {
+        a.alarm += EASE[sp.rarity].freezePenalty;
+        if (a.alarm >= 1) { this.startFlee(a, player, t, input.tempo, d, ev); continue; }
+        if (a.look) { a.look = undefined; a.looks = (a.looks ?? 0) + 1; a.nextLookMs = t + 4000; ev.push({ type: "look_end", id: a.id, tMs: t }); }
+      }
       if (a.look?.phase === "look") { a.state = "look"; const v = toLocal(a.pos, player!); a.headingDeg = ((Math.atan2(v.x, v.y) * 180) / Math.PI + 360) % 360; continue; }
       if (a.alarm >= BEHAVIOR.alertAt) {
         if (a.state !== "alert") { a.state = "alert"; a.disturbed = true; ev.push({ type: "alert", id: a.id, tMs: t }); }
@@ -369,7 +373,7 @@ export class WorldEngine {
   /** Slutet på en springande flykt: djuret stannar vaksamt (och lämnar flyktvägen som spår) om det har flykter kvar, annars försvinner det. */
   private endRun(a: Animal, t: number, ev: EngineEvent[]): void {
     a.flees = (a.flees ?? 0) + 1;
-    if (a.flees >= BEHAVIOR.fleesBeforeGone || a.flee?.kind !== "run") { this.gone(a, t, "fled", ev); return; }
+    if (a.flees >= EASE[SPECIES[a.species].rarity].flees || a.flee?.kind !== "run") { this.gone(a, t, "fled", ev); return; }
     const from = a.flee.from;
     a.flee = undefined;
     a.state = "alert";

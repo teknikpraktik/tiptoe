@@ -92,7 +92,7 @@ export const en: Record<MessageKey, string> = {
   "howto.walk.title": "Go outside",
   "howto.walk.body": "Start a walk. The map shows where you are, and the animals are around you in the real world.",
   "howto.tracks.title": "Follow the tracks",
-  "howto.tracks.body": "Faint paw prints lead to an animal. A clear, coloured paw print is the animal itself; when it moves it leaves tracks that fade. Tap it to learn more.",
+  "howto.tracks.body": "Faint paw prints lead to an animal. A ring with a question mark is an animal you have not identified yet; once you have photographed the species it shows as a coloured paw print. Tap the animal to see more.",
   "howto.sneak.title": "Sneak and freeze",
   "howto.sneak.body": "Walk slowly closer. If the animal looks at you, stand completely still, or it will flee. The first time it usually stops a little way off: follow the tracks and try again.",
   "howto.photo.title": "Take the photo",

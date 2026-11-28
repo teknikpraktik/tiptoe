@@ -96,7 +96,7 @@ export function Walk() {
   // Arter man redan fotograferat visas med namn; andra är "okänt djur" (upptäckten är en del av spelet).
   const known = useMemo(() => new Set(v?.score.species ?? []), [v?.score.species]);
   const nameOf = useCallback((sp: SpeciesId) => (known.has(sp) ? t(`species.${sp}`) : t("animal.unknown")), [known, t]);
-  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, look: a.look, headingDeg: a.headingDeg, label: t("walk.animalNear", { species: nameOf(a.species), m: Math.round(a.distM) }) })), [v?.animals, t, nameOf]);
+  const animals = useMemo(() => (v?.animals ?? []).map((a) => ({ id: a.id, lat: a.lat, lon: a.lon, state: a.state, rarity: SPECIES[a.species].rarity, escape: SPECIES[a.species].escape, look: a.look, headingDeg: a.headingDeg, known: known.has(a.species), label: t("walk.animalNear", { species: nameOf(a.species), m: Math.round(a.distM) }) })), [v?.animals, t, nameOf, known]);
   // Tryck på ett djur: ett kort med vad det är, hur långt bort och vad det gör. Stängs efter 6 s, vid tryck eller när djuret är borta.
   const [picked, setPicked] = useState<string | null>(null);
   const pickedAnimal = picked ? v?.animals.find((a) => a.id === picked && a.state !== "gone") ?? null : null;

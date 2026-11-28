@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { WORLD } from "@/engine/config";
 import { newEngineState, WorldEngine, type EngineEvent } from "@/engine/engine";
-import { ALL_SPECIES, SPECIES, WATER_ZONE, speciesWeight, type SpeciesId } from "@/engine/species";
+import { ALL_SPECIES, BASE_SPECIES, SPECIES, WATER_ZONE, speciesWeight, type SpeciesId } from "@/engine/species";
 import { dayPhase } from "@/engine/sun";
 import { candidates, cellOf, idlePose, waterAt, windowOf, type Candidate } from "@/engine/world";
 import { haversineM } from "@/geo/geometry";
@@ -28,7 +28,10 @@ describe("specens 15 arter och renen", () => {
     for (const id of ALL_SPECIES) {
       const s = SPECIES[id];
       expect(s.points).toBe({ common: 50, uncommon: 100, rare: 250, very_rare: 1000 }[s.rarity]);
-      expect(s.photoM).toBeLessThanOrEqual(s.detectionM);
+      // Sällsynta djur märker en innan man är inom fotoavstånd; vanliga är lättare (EASE).
+      if (s.rarity === "rare" || s.rarity === "very_rare") expect(s.photoM).toBeLessThanOrEqual(s.detectionM);
+      expect(s.photoM).toBeGreaterThanOrEqual(BASE_SPECIES[id].photoM);
+      expect(s.detectionM).toBeLessThanOrEqual(BASE_SPECIES[id].detectionM);
     }
     expect(ALL_SPECIES.filter((s) => SPECIES[s].rarity === "very_rare")).toEqual(["wolf", "brown_bear", "white_tailed_eagle"]);
   });

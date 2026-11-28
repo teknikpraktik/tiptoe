@@ -37,7 +37,9 @@ const PRINT_FADE_S = 180;
 const PRINT_STEP_M = 6;
 const DOT_SVG = `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7.5" fill="#f4e9cf" stroke="#2b2f27" stroke-width="3"/></svg>`;
 
-export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string; escape?: string; look?: string; headingDeg?: number }
+export interface MapAnimal { id: string; lat: number; lon: number; state: string; label: string; rarity: string; escape?: string; look?: string; headingDeg?: number; known?: boolean }
+/** Ett djur man inte vet vad det är än (arten inte fotograferad): en rund ring med ett frågetecken (fälttest 2). Vrids inte med djuret. */
+const UNKNOWN_HTML = `<span class="qring" aria-hidden="true">?</span>`;
 
 export interface GameMapProps {
   player?: LatLon | null;
@@ -233,13 +235,16 @@ export default function GameMap(props: GameMapProps) {
         el.setAttribute("role", "button");
         el.setAttribute("data-testid", "animal");
         el.dataset.id = a.id;
-        el.innerHTML = `<span class="adot">${PAW_SVG}</span>`;
+        el.innerHTML = `<span class="adot">${PAW_SVG}</span>${UNKNOWN_HTML}`;
         el.addEventListener("click", (e) => { e.stopPropagation(); propsRef.current.onAnimalTap?.(a.id); });
         x = { m: new Marker({ element: el, rotationAlignment: "map" }).setLngLat([a.lon, a.lat]).addTo(map), el, at: { lat: a.lat, lon: a.lon }, target: { lat: a.lat, lon: a.lon }, lastPrint: { lat: a.lat, lon: a.lon } };
         animalMarkers.current.set(a.id, x);
       }
       x.target = { lat: a.lat, lon: a.lon };
-      if (a.headingDeg != null) x.m.setRotation(a.headingDeg);
+      // Okänt djur: ringen står rätt (frågetecknet ska gå att läsa), känt djur: tassen vrids åt färdriktningen.
+      x.el.dataset.known = a.known ? "1" : "0";
+      x.m.setRotationAlignment(a.known ? "map" : "viewport");
+      x.m.setRotation(a.known && a.headingDeg != null ? a.headingDeg : 0);
       x.el.dataset.state = a.state;
       x.el.dataset.rarity = a.rarity;
       x.el.dataset.escape = a.escape ?? "run";
