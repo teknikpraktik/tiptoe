@@ -93,7 +93,7 @@ export const sv = {
   "howto.walk.title": "Gå ut",
   "howto.walk.body": "Starta en promenad. Kartan visar var du är, och djuren finns runt omkring dig i verkligheten.",
   "howto.tracks.title": "Följ spåren",
-  "howto.tracks.body": "Svaga tassavtryck leder till ett djur. Ett tydligt, färgat avtryck är djuret självt; går det lämnar det spår som bleknar. Tryck på det för att se mer.",
+  "howto.tracks.body": "Svaga tassavtryck leder till ett djur. En ring med frågetecken är ett djur du inte vet vad det är än; när du har fotograferat arten visas den som ett färgat tassavtryck. Tryck på djuret för att se mer.",
   "howto.sneak.title": "Smyg och frys",
   "howto.sneak.body": "Gå långsamt närmare. Tittar djuret mot dig ska du stå helt still, annars flyr det. Första gången stannar det oftast en bit bort: följ spåren och försök igen.",
   "howto.photo.title": "Fotografera",

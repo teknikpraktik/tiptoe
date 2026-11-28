@@ -56,24 +56,32 @@ export const BEHAVIOR = {
   tempoAlarm: { still: 0.03, sneak: 0.2, walk: 0.7, run: 2 },
   /** Flykt: sträcka (m) som djuret springer (spec: flyende djur springer inte långt). */
   fleeDistM: [40, 80] as [number, number],
-  /**
-   * Så många gånger kan ett djur som springer (inte dyker eller flyger) fly. Före den sista stannar det efter flykten och går att smyga ikapp
-   * (fälttest 1: djuren försvann när man gick mot dem); den sista gången försvinner det.
-   */
-  fleesBeforeGone: 2,
   /** Tomgång: längd på ett moment (s) och hur långt en vandring går (m). */
   idleLegS: [15, 60] as [number, number],
   wanderM: [5, 25] as [number, number],
-  /** Hur långt bort (m) ett djur syns på kartan. Längre bort syns bara spåren (spec: Hör och upptäck – spår kan leda mot ett djur). */
-  visibleM: 180,
+  /** Hur långt bort (m) ett djur syns på kartan, i realtid (fälttest 2: alla aktiva djur syns; de dyker upp högst 220 m bort). */
+  visibleM: 400,
   /** Spåren syns inom detta avstånd till djuret, också när djuret syns (så att de inte försvinner när man går mot det). */
   trailM: 350,
   /** Frys-moment (spec: artspecifikt, 1–3 s blick, med förvarning). Förvarningen är lång nog för att stegräknaren ska hinna se att man stannat. */
   freeze: {
     warnMs: 3000,
-    everyS: { common: [20, 40], uncommon: [16, 32], rare: [12, 24], very_rare: [10, 20] } as Record<string, [number, number]>,
+    everyS: { common: [35, 60], uncommon: [16, 32], rare: [12, 24], very_rare: [10, 20] } as Record<string, [number, number]>,
     lookS: { common: [1, 2], uncommon: [1.5, 2.5], rare: [2, 3], very_rare: [2, 3] } as Record<string, [number, number]>,
     /** Djuret bryr sig bara om spelaren inom upptäcktsradien (gångtempo) × detta. */
     awareFactor: 1.4,
   },
+} as const;
+
+/**
+ * Hur lätta djuren är att fånga, per klass (fälttest 2: "lätta djur måste vara lättare, de exklusiva får vara svåra"). Tillämpas på artdatan
+ * (`SPECIES`): `photo` multiplicerar fotoavståndet, `detection` upptäcktsradien och `alarm` hur fort oron växer. `freezePenalty` är hur
+ * mycket oro det kostar att röra sig när djuret tittar (1 = flyr direkt). `flees` är hur många gånger ett springande djur kan fly innan det
+ * försvinner (de första gångerna stannar det en bit bort).
+ */
+export const EASE = {
+  common: { photo: 1.5, detection: 0.7, alarm: 0.5, freezePenalty: 0.35, flees: 3 },
+  uncommon: { photo: 1.25, detection: 0.85, alarm: 0.75, freezePenalty: 0.6, flees: 2 },
+  rare: { photo: 1, detection: 1, alarm: 1, freezePenalty: 1, flees: 1 },
+  very_rare: { photo: 1, detection: 1, alarm: 1, freezePenalty: 1, flees: 1 },
 } as const;

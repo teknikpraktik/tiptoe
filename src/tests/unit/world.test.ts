@@ -6,6 +6,7 @@ import { ENV_LAYERS, makeEnvironment, safeSpot } from "@/geo/environment";
 import { decodeFeatures } from "@/geo/mvt";
 import { checkPickPoint, type MapFeature } from "@/geo/point-check";
 import { BEHAVIOR, WORLD } from "@/engine/config";
+import { SPECIES, type SpeciesId } from "@/engine/species";
 import { candidates, cellBounds, cellOf, cellsAround, idlePose, windowOf } from "@/engine/world";
 import { newEngineState, WorldEngine, type EngineEvent } from "@/engine/engine";
 import { simEnvironment, simFeatures, simPoint } from "@/sim/env";
@@ -144,17 +145,17 @@ describe("motorn: budget, upptäckt och flykt", () => {
     walk(e, [-960, -40], [960, -40], 1.3, "walk", T0, ev);
     for (const x of ev) if (x.type === "appear") expect(x.distM).toBeGreaterThanOrEqual(60);
   });
-  /** Ett rådjur rakt fram, och spelaren som närmar sig i ett visst tempo. */
-  const approach = (tempo: "sneak" | "walk") => {
+  /** Ett djur rakt fram, och spelaren som närmar sig i ett visst tempo till `stopAt` m. */
+  const approach = (tempo: "sneak" | "walk" | "run", species: SpeciesId = "lynx", stopAt = 30) => {
     const s = newEngineState(T0);
     const e = new WorldEngine(s, env);
-    const deer = simPoint(500, -500);
-    s.active.push({ id: "test", species: "roe_deer", seed: 1, cell: cellOf(deer), window: windowOf(T0), n: 0, home: deer, pos: deer, headingDeg: 0, state: "graze", alarm: 0, disturbed: true, appearedAtMs: T0 });
+    const home = simPoint(500, -500);
+    s.active.push({ id: "test", species, seed: 1, cell: cellOf(home), window: windowOf(T0), n: 0, home, pos: home, headingDeg: 0, state: "graze", alarm: 0, disturbed: true, appearedAtMs: T0 });
     s.budget = -100; // inga andra djur
     let t = T0;
-    const speed = tempo === "sneak" ? 0.6 : 1.3;
+    const speed = tempo === "sneak" ? 0.6 : tempo === "walk" ? 1.3 : 3;
     // En smygande spelare fryser när djuret förvarnar eller tittar (spec: Frys!); en gående bryr sig inte.
-    for (let d = 90; d >= 30;) {
+    for (let d = 90; d >= stopAt;) {
       t += 1000;
       const freeze = tempo === "sneak" && !!s.active[0].look;
       if (!freeze) d -= speed;
@@ -162,23 +163,31 @@ describe("motorn: budget, upptäckt och flykt", () => {
       if (s.active[0].state === "flee" || s.active[0].state === "gone") return { fledAt: d, e, t };
     }
     // Framme: stå still och fotografera.
+    const me = simPoint(500, -500 - stopAt);
     t += 1000;
-    e.step({ tMs: t, pos: simPoint(500, -530), tempo: "still", posOk: true });
-    return { fledAt: null, e, t, can: e.canPhotograph(s.active[0], simPoint(500, -530), "still"), canWalking: e.canPhotograph(s.active[0], simPoint(500, -530), "walk") };
+    e.step({ tMs: t, pos: me, tempo: "still", posOk: true });
+    return { fledAt: null, e, t, can: e.canPhotograph(s.active[0], me, "still"), canWalking: e.canPhotograph(s.active[0], me, "walk") };
   };
-  it("gå rakt mot ett rådjur: det flyr innan fotoavståndet (35 m)", () => {
+  it("gå rakt mot ett lodjur (sällsynt): det flyr innan fotoavståndet (35 m)", () => {
     const r = approach("walk");
     expect(r.fledAt).not.toBeNull();
-    expect(r.fledAt!).toBeGreaterThan(35);
+    expect(r.fledAt!).toBeGreaterThan(SPECIES.lynx.photoM);
   });
-  it("smyg fram till 30 m och stå still: fotot går att ta (men inte i gångtempo)", () => {
+  it("smyg fram till ett lodjur och stå still: fotot går att ta (men inte i gångtempo)", () => {
     const r = approach("sneak");
     expect(r.fledAt).toBeNull();
     expect(r.can).toBe(true);
     expect(r.canWalking).toBe(false);
   });
-  it("ett djur som springer iväg stannar första gången en kort bit bort, med flyktvägen som spår; andra gången försvinner det", () => {
-    const r = approach("walk");
+  it("vanliga djur är lätta (fälttest 2): till ett rådjur räcker det att gå lugnt fram och stanna inom fotoavståndet", () => {
+    expect(SPECIES.roe_deer.photoM).toBeGreaterThan(SPECIES.lynx.photoM);
+    const r = approach("walk", "roe_deer", 40);
+    expect(r.fledAt).toBeNull();
+    expect(r.can).toBe(true);
+  });
+  it("ett djur som springer iväg stannar en kort bit bort med flyktvägen som spår; sista gången försvinner det (ovanligt: 2 flykter)", () => {
+    const r = approach("run", "wild_boar", 5);
+    expect(r.fledAt).not.toBeNull();
     let t = r.t;
     const me = simPoint(500, -560);
     for (let i = 0; i < 60; i++) { t += 1000; r.e.step({ tMs: t, pos: me, tempo: "still", posOk: true }); }
@@ -200,6 +209,13 @@ describe("motorn: budget, upptäckt och flykt", () => {
     }
     const after = r.e.s.active.find((x) => x.id === "test");
     expect(after === undefined || after.state === "gone").toBe(true);
+  });
+  it("ett sällsynt djur som flyr är borta direkt", () => {
+    const r = approach("walk");
+    let t = r.t;
+    for (let i = 0; i < 60; i++) { t += 1000; r.e.step({ tMs: t, pos: simPoint(500, -560), tempo: "still", posOk: true }); }
+    const a = r.e.s.active.find((x) => x.id === "test");
+    expect(a === undefined || a.state === "gone").toBe(true);
   });
   it("tillståndet går att spara och återställa (JSON) utan att något ändras", () => {
     const e = new WorldEngine(newEngineState(T0), env);
