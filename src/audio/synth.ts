@@ -1,8 +1,8 @@
 import type { Ambience, SoundCue } from "./director";
 
 /**
- * Syntetiska ljud med WebAudio (beslut: inga ljudfiler). Brus genom filter och enkla oscillatorer: prassel, knäckt kvist, varningsläten,
- * frys-varning, plask, vingslag, ambient. Kan bytas mot inspelningar senare utan att regin (director.ts) ändras.
+ * Syntetiska ljud med WebAudio. Djurläten, fåglar och möss är inspelade (samples.ts, fälttest 2); de syntetiska ljuden är reserven när en
+ * inspelning inte är inläst, och används för frys-varning, flykt, plask, vingslag, belöning och ambientbruset. Brus genom filter och enkla oscillatorer: prassel, knäckt kvist, varningsläten,
  */
 type Ctx = AudioContext;
 
@@ -76,7 +76,7 @@ export function playCue(ctx: Ctx, master: AudioNode, c: SoundCue): void {
   }
 }
 
-/** Ambient: ett brusskikt (vind, vatten, stadsbrus) och i skogen enstaka fågelkvitter. Returnerar en funktion som stänger av. */
+/** Ambient: ett brusskikt (vind, vatten, stadsbrus). Fåglar och möss är inspelade läten som regin spelar (samples.ts). Returnerar en funktion som stänger av. */
 export function startAmbience(ctx: Ctx, master: AudioNode, kind: Ambience): () => void {
   if (kind === "none") return () => undefined;
   const g = ctx.createGain();
@@ -95,14 +95,7 @@ export function startAmbience(ctx: Ctx, master: AudioNode, kind: Ambience): () =
   lfo.connect(lfoGain).connect(f.frequency);
   src.connect(f).connect(g);
   src.start(); lfo.start();
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const bird = () => {
-    for (let i = 0, n = 2 + Math.floor(Math.random() * 4); i < n; i++) tone(ctx, g, ctx.currentTime + i * 0.12, 0.08, 3000 + Math.random() * 1500, 3800 + Math.random() * 1500, "sine", 0.6);
-    timer = setTimeout(bird, 3000 + Math.random() * 6000);
-  };
-  if (kind === "forest") timer = setTimeout(bird, 1500);
   return () => {
-    if (timer) clearTimeout(timer);
     const t = ctx.currentTime;
     g.gain.cancelScheduledValues(t);
     g.gain.setValueAtTime(g.gain.value, t);
